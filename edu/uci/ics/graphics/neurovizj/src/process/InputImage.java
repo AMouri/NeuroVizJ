@@ -2,7 +2,6 @@ package edu.uci.ics.graphics.neurovizj.src.process;
 
 import ij.IJ;
 import ij.ImagePlus;
-import ij.io.Opener;
 import ij.plugin.filter.RankFilters;
 import ij.process.ImageProcessor;
 import ij.process.ImageStatistics;
@@ -47,8 +46,6 @@ public class InputImage {
 		//TODO, image is a bit bright
 		
 		adjImg = new ImagePlus("test.png", adjProc);
-		
-		IJ.save(adjImg, "test.png"); //TODO: remove from testing
 	}
 	
 	public ImagePlus getOrig(){
