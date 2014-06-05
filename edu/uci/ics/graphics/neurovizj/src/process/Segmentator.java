@@ -32,25 +32,15 @@ public class Segmentator {
 		EAST, NORTHEAST, NORTH, NORTHWEST
 	}
 	
-	//test for now
-	public static void main(String[] args){
-		//System.out.println("Hello World!");
-		//InputImage test = new InputImage("1.png");
-		
-		Opener opener = new Opener();
-		IJ.save(segment("1.png"), "test.png"); //TODO: remove when finished testing
-		opener.open("test.png");
-	}
-	
 	/**
 	 * Segments the image located at path
 	 * @param path
 	 * @return
 	 */
-	public static ImagePlus segment(String path){
+	public ImagePlus segment(String path){
 		//long begin = System.nanoTime();
-		InputImage input = new InputImage(path);
 		long begin = System.nanoTime();
+		InputImage input = new InputImage(path);
 		ImageProcessor adjustedImg = input.getAdjusted().getProcessor();
 		//Generate a mask with threshold 0.2*255
 		ImageProcessor adjImg = adjustedImg.duplicate();
@@ -71,12 +61,12 @@ public class Segmentator {
 		en.copyBits(minSuppres, 0, 0, Blitter.MULTIPLY);
 		
 		//Detect edges
-		ImageProcessor e = canny(en, .1);
+		ImageProcessor e = canny(en, Math.sqrt(2));
 		//Canny_Edge_Detector cn = new Canny_Edge_Detector();
 		//ImageProcessor e = cn.process(en);
 		
 		//dilate the image
-		filter.rank(e, 10, RankFilters.MAX);
+		//filter.rank(e, 10, RankFilters.MAX);
 		
 		//negate image
 		
@@ -88,16 +78,16 @@ public class Segmentator {
 		Double min_size = 0.0;
 		Double max_size = Double.POSITIVE_INFINITY;
 		ParticleAnalyzer pa = new ParticleAnalyzer(ParticleAnalyzer.SHOW_RESULTS, 0, rt, min_size, max_size);
-		pa.analyze(imp);
+		//pa.analyze(imp);
 		//e = imp.getProcessor();
 		e.invert();
 		
-		filter.rank(e, 5, RankFilters.OPEN);
+		//filter.rank(e, 5, RankFilters.OPEN);
 		
 		//smoothing
 		e = e.convertToByteProcessor();
 		adjImg = adjImg.convertToFloatProcessor();
-		e.copyBits(adjImg, 0, 0, Blitter.MULTIPLY);
+		//e.copyBits(adjImg, 0, 0, Blitter.MULTIPLY);
 		//e.blurGaussian(10);
 		
 		
@@ -221,8 +211,8 @@ public class Segmentator {
 		ImageProcessor result = new ByteProcessor(x.getWidth(), x.getHeight());
 		for(int i = 0; i < x.getWidth(); i++){
 			for(int j = 0; j < x.getHeight(); j++){
-				double xCoord = x.get(i,j);
-				double yCoord = y.get(i,j);
+				double xCoord = Float.intBitsToFloat(x.get(i,j));
+				double yCoord = Float.intBitsToFloat(y.get(i,j));
 				double mag = g[i+1][j+1];
 				double trueAngle = Math.atan(yCoord/xCoord);
 				Direction dir = approxAngle(trueAngle);
