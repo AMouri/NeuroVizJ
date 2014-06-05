@@ -6,6 +6,9 @@ import java.util.List;
 
 import ij.IJ;
 import ij.ImagePlus;
+import ij.io.Opener;
+import ij.measure.ResultsTable;
+import ij.plugin.filter.ParticleAnalyzer;
 import ij.plugin.filter.RankFilters;
 import ij.process.Blitter;
 import ij.process.ByteProcessor;
@@ -34,9 +37,9 @@ public class Segmentator {
 		//System.out.println("Hello World!");
 		//InputImage test = new InputImage("1.png");
 		
-		//Opener opener = new Opener();
-		//opener.open(segment("1.png"))
+		Opener opener = new Opener();
 		IJ.save(segment("1.png"), "test.png"); //TODO: remove when finished testing
+		opener.open("test.png");
 	}
 	
 	/**
@@ -45,36 +48,63 @@ public class Segmentator {
 	 * @return
 	 */
 	public static ImagePlus segment(String path){
+		//long begin = System.nanoTime();
 		InputImage input = new InputImage(path);
+		long begin = System.nanoTime();
 		ImageProcessor adjustedImg = input.getAdjusted().getProcessor();
 		//Generate a mask with threshold 0.2*255
+		ImageProcessor adjImg = adjustedImg.duplicate();
 		adjustedImg.threshold(51);
-		adjustedImg.convertToFloat();
-		//adjustedImg.multiply(1/255.0);
 		
 		//now median filter with a 5x5 kernel to smooth the mask
-		RankFilters medFilt = new RankFilters();
-		medFilt.rank(adjustedImg, 2, RankFilters.MEDIAN);
+		RankFilters filter = new RankFilters();
+		filter.rank(adjustedImg, 2, RankFilters.MEDIAN);
 		
 		//apply mask
 		ImageProcessor minSuppres = input.getOrig().getProcessor();
 		minSuppres.copyBits(adjustedImg, 0, 0, Blitter.AND);
 		
 		minSuppres = minSuppres.convertToFloatProcessor();
-		//minSuppres.multiply(1.0/255);
 
 		//Now perform difference of Gaussians
-		ImageProcessor en = gaussDifference(minSuppres, 8.0, 5.0).convertToFloatProcessor();
-		//en.multiply(1.0/255);
-		
+		ImageProcessor en = gaussDifference(minSuppres, 8.0, 5.0);
 		en.copyBits(minSuppres, 0, 0, Blitter.MULTIPLY);
 		
-		//en.multiply(255*255);
+		//Detect edges
+		ImageProcessor e = canny(en, .1);
+		//Canny_Edge_Detector cn = new Canny_Edge_Detector();
+		//ImageProcessor e = cn.process(en);
 		
-		//en = en.convertToByteProcessor(false);
-		ImageProcessor e = canny(en, Math.sqrt(2));
+		//dilate the image
+		filter.rank(e, 10, RankFilters.MAX);
 		
-		return new ImagePlus("Hello", e); //TODO: change was completed testing
+		//negate image
+		
+		//area opening and fill holes, also indexes particles
+		//TODO: fill holes
+		e.invert();
+		ImagePlus imp = new ImagePlus("Temp", e.duplicate());
+		ResultsTable rt = new ResultsTable();
+		Double min_size = 0.0;
+		Double max_size = Double.POSITIVE_INFINITY;
+		ParticleAnalyzer pa = new ParticleAnalyzer(ParticleAnalyzer.SHOW_RESULTS, 0, rt, min_size, max_size);
+		pa.analyze(imp);
+		//e = imp.getProcessor();
+		e.invert();
+		
+		filter.rank(e, 5, RankFilters.OPEN);
+		
+		//smoothing
+		e = e.convertToByteProcessor();
+		adjImg = adjImg.convertToFloatProcessor();
+		e.copyBits(adjImg, 0, 0, Blitter.MULTIPLY);
+		//e.blurGaussian(10);
+		
+		
+		System.out.println("Time elapsed: " + (System.nanoTime() - begin)/1000000000.0 + " seconds");
+		
+		e = e.convertToFloat();
+		return new ImagePlus("Hello", e); //TODO: change when completed testing
 	}
 	
 	/**
@@ -113,7 +143,7 @@ public class Segmentator {
 		//Compute the intensity gradient using Sobel
 		ImageProcessor Gx = xGradient(result);
 		ImageProcessor Gy = yGradient(result);
-		
+	
 		//Compute the magnitude of the gradient
 		float[][] gradientMag = gradientStrength(Gx, Gy);
 		
@@ -121,14 +151,20 @@ public class Segmentator {
 		ImageProcessor suppressed = nonMaxSuppression(Gx, Gy, gradientMag);
 		
 		//Determine hysterisis threshold
-		double highThreshold = getHighThreshold(new ByteProcessor(new FloatProcessor(gradientMag), true), percentNotEdges);
+		float[][] unPaddedMag = new float[Gx.getWidth()][Gy.getHeight()];
+		for(int i = 0; i < Gx.getWidth(); i++){
+			for(int j = 0; j < Gx.getHeight(); j++){
+				unPaddedMag[i][j] = gradientMag[i+1][j+1];
+			}
+		}
+		double highThreshold = getHighThreshold(new ByteProcessor(new FloatProcessor(unPaddedMag), true), percentNotEdges);
 		double lowThreshold = thresholdRatio * highThreshold;
-		
-		System.out.println(highThreshold + " " + lowThreshold);
 		
 		//now perform hysterisis
 		result = doHysterisis(suppressed, lowThreshold, highThreshold);
 		//result.multiply(255.0);
+		
+		result = result.convertToByteProcessor();
 		
 		return result;
 	}
@@ -139,7 +175,6 @@ public class Segmentator {
 	 * @return
 	 */
 	private static ImageProcessor xGradient(ImageProcessor ip){
-		//ImageProcessor result = new TypeConverter(ip, false).convertToFloat(null);
 		ImageProcessor result = ip.duplicate();
 		int[] Gx = {-1, 0, 1, -2, 0, 2, -1, 0, 1};
 		result.convolve3x3(Gx);
@@ -152,7 +187,7 @@ public class Segmentator {
 	 * @return
 	 */
 	private static ImageProcessor yGradient(ImageProcessor ip){
-		ImageProcessor result = new TypeConverter(ip, false).convertToFloat(null);
+		ImageProcessor result = ip.duplicate();
 		int[] Gy = {-1, -2, -1, 0, 0, 0, 1, 2, 1};
 		result.convolve3x3(Gy);
 		return result;
@@ -177,7 +212,7 @@ public class Segmentator {
 	}
 	
 	/**
-	 * Performs non-maximum suppression with gradient described by (x,y) with maginitude g
+	 * Performs non-maximum suppression with gradient described by (x,y) with magnitude g
 	 * @param x
 	 * @param y
 	 * @return
@@ -194,7 +229,7 @@ public class Segmentator {
 				switch(dir){
 					case EAST:
 						result.set(i, j, 
-								(g[i][j+1] < mag && g[i+2][j+1] < mag) ? 255 : 0);
+								(g[i][j+1] <= mag && g[i+2][j+1] < mag) ? 255 : 0);
 						break;
 					case NORTHEAST:
 						result.set(i, j, 
