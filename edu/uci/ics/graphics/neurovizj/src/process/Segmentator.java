@@ -53,25 +53,38 @@ public class Segmentator {
 		ImageProcessor minSuppres = input.getOrig().getProcessor();
 		minSuppres.copyBits(adjustedImg, 0, 0, Blitter.AND);
 		
-		FloatProcessor temp1 = minSuppres.convertToFloatProcessor();
+		//FloatProcessor temp1 = minSuppres.convertToFloatProcessor();
 
 		//Now perform difference of Gaussians
-		ImageProcessor en = gaussDifference(temp1, 8.0, 5.0);
-		FloatProcessor temp = en.convertToFloatProcessor();
-		temp.copyBits(temp1, 0, 0, Blitter.MULTIPLY);
-		//temp.resetMinAndMax();
+		ImageProcessor en = gaussDifference(minSuppres, 8.0, 5.0);
+		ByteProcessor minSuppres2 = minSuppres.convertToByteProcessor();
+		ByteProcessor temp = en.convertToByteProcessor();
+		temp.copyBits(minSuppres2, 0, 0, Blitter.MULTIPLY);
+		FloatProcessor temp2 = temp.convertToFloatProcessor();
+		temp2.resetMinAndMax();
 		
 		//Detect edges
 		Canny canny = new Canny(.4, .7, Math.sqrt(2));
-		ImageProcessor e = canny.canny(en);
+		ImageProcessor e = canny.canny(temp2);
 		
+		Binary binFilt = new Binary();
+		binFilt.setup("fill holes", null);
+		e.invert();
+		binFilt.run(e);
+		e.invert();
 		//dilate the image
-		filter.rank(e, 10, RankFilters.MAX);
+		filter.rank(e, 5, RankFilters.MAX);
+		e.invert();
+		binFilt.run(e);
+		e.invert();
 		
 		//opening!
+		/*
 		e.invert();
-		filter.rank(e, 3, RankFilters.OPEN);
+		filter.rank(e, 10, RankFilters.MIN);
+		filter.rank(e, 10, RankFilters.MAX);
 		e.invert();
+		*/
 		
 		/*
 		e.invert();
@@ -86,13 +99,13 @@ public class Segmentator {
 		*/
 		
 		//fill holes
-		Binary binFilt = new Binary();
-		binFilt.setup("fill holes", null);
+		/*
 		e.invert();
 		binFilt.run(e);
 		e.invert();
+		*/
 		
-		//filter.rank(e, 5, RankFilters.OPEN);
+		filter.rank(e, 5, RankFilters.OPEN);
 		
 		//smoothing
 		//may want to make better
@@ -113,7 +126,7 @@ public class Segmentator {
 		
 		System.out.println("Time elapsed: " + (System.nanoTime() - begin)/1000000000.0 + " seconds");
 		//e = e.convertToFloat();
-		return new ImagePlus("Hello", maximas); //TODO: change when completed testing
+		return new ImagePlus("Hello", smooth); //TODO: change when completed testing
 	}
 	
 	/**
