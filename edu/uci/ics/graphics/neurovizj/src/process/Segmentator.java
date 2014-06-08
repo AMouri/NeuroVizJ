@@ -73,7 +73,7 @@ public class Segmentator {
 		binFilt.run(e);
 		e.invert();
 		//dilate the image
-		filter.rank(e, 5, RankFilters.MAX);
+		filter.rank(e, 8, RankFilters.MAX);
 		e.invert();
 		binFilt.run(e);
 		e.invert();
@@ -86,17 +86,15 @@ public class Segmentator {
 		e.invert();
 		*/
 		
-		/*
+		//find all cells
 		e.invert();
 		ImagePlus imp = new ImagePlus("Temp", e.duplicate());
-		ResultsTable rt = new ResultsTable();
+		e.invert();
+		ResultsTable blobs = new ResultsTable();
 		Double min_size = 0.0;
 		Double max_size = Double.POSITIVE_INFINITY;
-		ParticleAnalyzer pa = new ParticleAnalyzer(ParticleAnalyzer.SHOW_RESULTS, 0, rt, min_size, max_size);
+		ParticleAnalyzer pa = new ParticleAnalyzer(ParticleAnalyzer.SHOW_RESULTS, 0, blobs, min_size, max_size);
 		pa.analyze(imp);
-		e = imp.getProcessor();
-		e.invert();
-		*/
 		
 		//fill holes
 		/*
@@ -105,12 +103,16 @@ public class Segmentator {
 		e.invert();
 		*/
 		
-		filter.rank(e, 5, RankFilters.OPEN);
+		//filter.rank(e, 5, RankFilters.OPEN);
 		
 		//smoothing
 		//may want to make better
 		ImageProcessor presmooth = e.convertToFloatProcessor();
-		presmooth.multiply(100);
+		ImageProcessor presmooth1 = presmooth.duplicate();
+		
+		//workaround: adding is technically incorrect but
+		//it works for now
+		filter.rank(presmooth, 5, RankFilters.OPEN);
 		ImageProcessor adj = adjImg.convertToFloatProcessor();
 		presmooth.copyBits(adj, 0, 0, Blitter.ADD);
 		presmooth.blurGaussian(10);
@@ -120,13 +122,38 @@ public class Segmentator {
 		ImageProcessor mask = genMask(smooth.getWidth(), smooth.getHeight(), 40);
 		smooth.copyBits(mask, 0, 0, Blitter.AND);
 		MaximumFinder maxFind = new MaximumFinder();
-		ImageProcessor maximas = maxFind.findMaxima(smooth, .002, .02, MaximumFinder.IN_TOLERANCE, false, false);
+		ImageProcessor maximas = maxFind.findMaxima(smooth, 1, 50, MaximumFinder.IN_TOLERANCE, true, false);
+		
+		maximas.invert();
+		ImagePlus maxImp = new ImagePlus("Temp", maximas.duplicate());
+		maximas.invert();
+		ResultsTable m = new ResultsTable();
+		min_size = 0.0;
+		max_size = Double.POSITIVE_INFINITY;
+		pa = new ParticleAnalyzer(ParticleAnalyzer.SHOW_RESULTS, 0, m, min_size, max_size);
+		pa.analyze(maxImp);
+		
+		//determine boundaries
+		ImageProcessor boundaries = presmooth1.duplicate();
+		boundaries.invert();
+		ImageProcessor tempBoundaries = boundaries.duplicate();
+		filter.rank(tempBoundaries, 2, RankFilters.MIN);
+		boundaries.copyBits(tempBoundaries, 0, 0, Blitter.SUBTRACT);
+		
+		
+		//invert the original image
+		ImageProcessor imc = input.getOrig().getProcessor().duplicate();
+		imc.invert();
+		
+		//find connected components
+		
+		
 		
 		
 		
 		System.out.println("Time elapsed: " + (System.nanoTime() - begin)/1000000000.0 + " seconds");
 		//e = e.convertToFloat();
-		return new ImagePlus("Hello", smooth); //TODO: change when completed testing
+		return new ImagePlus("Hello", maximas); //TODO: change when completed testing
 	}
 	
 	/**
