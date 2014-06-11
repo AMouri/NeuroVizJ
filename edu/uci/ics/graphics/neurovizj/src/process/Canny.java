@@ -27,33 +27,27 @@ public class Canny {
 		//Filter out noise
 		ImageProcessor result = ip.duplicate();
 		result.blurGaussian(sigma);
-		//result.convertToFloat();
-		//result.multiply(1/255.0);
+		
 		//Compute the intensity gradient using Sobel
 		ImageProcessor Gx = xGradient(result);
 		ImageProcessor Gy = yGradient(result);
 	
 		//Compute the magnitude of the gradient
-		float[][] gradientMag = gradientStrength(Gx, Gy);
+		FloatProcessor gradientMag = gradientStrength(Gx, Gy);
+		gradientMag.resetMinAndMax();
+		
+		if(gradientMag.getMax() > 0) gradientMag.multiply(1.0/gradientMag.getMax());
+		
 		
 		//Perform non-Maximum Supression to remove weak edges
 		ImageProcessor suppressed = nonMaxSuppression(Gx, Gy, gradientMag);
 		
-		//Determine hysterisis threshold
-		float[][] unPaddedMag = new float[Gx.getWidth()][Gy.getHeight()];
-		for(int i = 0; i < Gx.getWidth(); i++){
-			for(int j = 0; j < Gx.getHeight(); j++){
-				unPaddedMag[i][j] = gradientMag[i+1][j+1];
-			}
-		}
-		double highThreshold = getHighThreshold(new ByteProcessor(new FloatProcessor(unPaddedMag), true), percentNotEdges);
+		
+		double highThreshold = getHighThreshold(gradientMag.convertToByteProcessor(false), percentNotEdges);
 		double lowThreshold = thresholdRatio * highThreshold;
 		
 		//now perform hysterisis
-		result = doHysterisis(suppressed, lowThreshold, highThreshold);
-		//result.multiply(255.0);
-		
-		result = result.convertToByteProcessor();
+		result = doHysterisis(suppressed, gradientMag, lowThreshold, highThreshold);
 		
 		return result;
 	}
@@ -88,13 +82,13 @@ public class Canny {
 	 * @param y
 	 * @return
 	 */
-	private static float[][] gradientStrength(ImageProcessor x, ImageProcessor y){
-		float[][] result = new float[x.getWidth()+2][x.getHeight()+2];
+	private static FloatProcessor gradientStrength(ImageProcessor x, ImageProcessor y){
+		FloatProcessor result = new FloatProcessor(x.getWidth(), x.getHeight());
 		for(int i = 1; i <= x.getWidth(); i++){
 			for(int j = 1; j <= x.getHeight(); j++){
 				float xCor = Float.intBitsToFloat(x.get(i-1,j-1));
 				float yCor = Float.intBitsToFloat(y.get(i-1,j-1));
-				result[i][j] = (float) Math.sqrt(Math.pow(xCor,2) + Math.pow(yCor, 2));
+				result.putPixelValue(i, j, (float) Math.hypot(xCor, yCor));
 			}
 		}
 		return result;
@@ -106,32 +100,34 @@ public class Canny {
 	 * @param y
 	 * @return
 	 */
-	private static ImageProcessor nonMaxSuppression(ImageProcessor x, ImageProcessor y, float[][] g){
+	private static ImageProcessor nonMaxSuppression(ImageProcessor x, ImageProcessor y, FloatProcessor g){
 		ImageProcessor result = new ByteProcessor(x.getWidth(), x.getHeight());
 		for(int i = 0; i < x.getWidth(); i++){
 			for(int j = 0; j < x.getHeight(); j++){
 				double xCoord = Float.intBitsToFloat(x.get(i,j));
 				double yCoord = Float.intBitsToFloat(y.get(i,j));
-				double mag = g[i+1][j+1];
+				double mag = Float.intBitsToFloat(g.get(i,j));
 				double trueAngle = Math.atan(yCoord/xCoord);
-				Direction dir = approxAngle(trueAngle);
-				switch(dir){
-					case EAST:
-						result.set(i, j, 
-								(g[i][j+1] <= mag && g[i+2][j+1] < mag) ? 255 : 0);
-						break;
-					case NORTHEAST:
-						result.set(i, j, 
-								(g[i][j] < mag && g[i+2][j+2] < mag) ? 255 : 0);
-						break;
-					case NORTH:
-						result.set(i, j, 
-								(g[i+1][j] < mag && g[i+1][j+2] < mag) ? 255 : 0);
-						break;
-					case NORTHWEST:
-						result.set(i, j, 
-								(g[i][j+2] < mag && g[i+2][j] < mag) ? 255 : 0);
-						break;
+				if(!Double.isNaN(trueAngle)){
+					Direction dir = approxAngle(trueAngle);
+					switch(dir){
+						case EAST:
+							result.set(i, j, 
+									(Float.intBitsToFloat(g.getPixel(i-1, j)) < mag && Float.intBitsToFloat(g.getPixel(i+1, j)) < mag) ? 255 : 0);
+							break;
+						case NORTHEAST:
+							result.set(i, j, 
+									(Float.intBitsToFloat(g.getPixel(i-1, j-1)) < mag && Float.intBitsToFloat(g.getPixel(i+1, j+1)) < mag) ? 255 : 0);
+							break;
+						case NORTH:
+							result.set(i, j, 
+									(Float.intBitsToFloat(g.getPixel(i, j-1)) < mag && Float.intBitsToFloat(g.getPixel(i, j+1)) < mag) ? 255 : 0);
+							break;
+						case NORTHWEST:
+							result.set(i, j, 
+									(Float.intBitsToFloat(g.getPixel(i-1, j+1)) < mag && Float.intBitsToFloat(g.getPixel(i+1, j-1)) < mag) ? 255 : 0);
+							break;
+					}
 				}
 			}
 		}
@@ -150,7 +146,9 @@ public class Canny {
 			return Direction.NORTHEAST;
 		} else if (theta <= -Math.PI/8 && theta >= -3*Math.PI/8){
 			return Direction.NORTHWEST;
-		} else return Direction.NORTH;
+		} else {
+			return Direction.NORTH;
+		}
 	}
 	
 	/**
@@ -171,7 +169,7 @@ public class Canny {
 		return buckets/64.0;
 	}
 	
-	private static ImageProcessor doHysterisis(ImageProcessor edges, double low, double high){
+	private static ImageProcessor doHysterisis(ImageProcessor edges, ImageProcessor gradient, double low, double high){
 		ImageProcessor result = new ByteProcessor(edges.getWidth(), edges.getHeight());
 		ImageProcessor med = result.duplicate();
 		
@@ -180,55 +178,55 @@ public class Canny {
 		//seek strong and medium edges
 		for(int i = 0; i < result.getWidth(); i++){
 			for(int j = 0; j < result.getHeight(); j++){
-				double intensity = edges.get(i,j);
-				if(intensity > high){
-					result.set(i,j,255);
-				}
-				if(intensity > low){
-					candidates.add(i*result.getWidth() + j);
-					med.set(i,j,255);
+				if(edges.get(i,j) == 255){
+					double intensity = Float.intBitsToFloat(gradient.get(i,j));
+					if(intensity > high){
+						result.set(i,j,255);
+					}
+					if(intensity > low){
+						candidates.add(i*result.getHeight() + j);
+						med.set(i,j,255);
+					}
 				}
 			}
 		}
 		//now look for medium edges that form some path to strong edges
-		return search(candidates, result, med, high);
+		return search(candidates, result, med);
 		
 	}
 	
 	
 	
-	private static ImageProcessor search(List<Integer> candidates, ImageProcessor strong, ImageProcessor med, double high){
+	private static ImageProcessor search(List<Integer> candidates, ImageProcessor strong, ImageProcessor med){
 		ImageProcessor result = strong.duplicate();
 		for(Integer pt : candidates){
-			int x = pt/strong.getWidth();
-			int y = pt % strong.getWidth();
+			int x = pt / strong.getHeight();
+			int y = pt % strong.getHeight();
 			if(result.get(x,y) != 255){
-				if(searchHelp(x, y, strong, med, new boolean[strong.getWidth()][strong.getHeight()], high)){
+				if(searchHelp(x, y, strong, med, new boolean[strong.getWidth()][strong.getHeight()])){
 					result.set(x,y, 255);
 				}
+			} else {
+				result.set(x,y,255);
 			}
 		}
 		return result;
 	}
 	
-	private static boolean searchHelp(int x, int y, ImageProcessor strong, ImageProcessor med, boolean[][] visited, double high){
+	private static boolean searchHelp(int x, int y, ImageProcessor strong, ImageProcessor med, boolean[][] visited){
 		visited[x][y] = true;
 		for(int i = x - 1; i <= x + 1; i++){
 			for(int j = y - 1; j <= y+1; j++){
-				if(i != x || j != y){
-					if(strong.getPixel(i,j) == 255){
-						return true;
-					}
+				if(strong.getPixel(i,j) == 255){
+					return true;
 				}
 			}
 		}
 		
 		for(int i = x - 1; i <= x + 1; i++){
 			for(int j = y - 1; j <= y+1; j++){
-				if(i != x || j != y){
-					if(med.getPixel(i,j) == 255 && !visited[i][j] && searchHelp(i, j, strong, med, visited, high)){
-						return true;
-					}
+				if(med.getPixel(i,j) == 255 && !visited[i][j] && searchHelp(i, j, strong, med, visited)){
+					return true;
 				}
 			}
 		}

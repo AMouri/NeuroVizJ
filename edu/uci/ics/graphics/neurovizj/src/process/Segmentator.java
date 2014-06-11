@@ -52,31 +52,27 @@ public class Segmentator {
 		//apply mask
 		ImageProcessor minSuppres = input.getOrig().getProcessor();
 		minSuppres.copyBits(adjustedImg, 0, 0, Blitter.AND);
+		minSuppres = minSuppres.convertToFloatProcessor();
+		minSuppres.resetMinAndMax();
+		minSuppres.multiply(1.0/minSuppres.getMax());
+		minSuppres.resetMinAndMax();
 		
 		//FloatProcessor temp1 = minSuppres.convertToFloatProcessor();
 
 		//Now perform difference of Gaussians
 		ImageProcessor en = gaussDifference(minSuppres, 8.0, 5.0);
-		ByteProcessor minSuppres2 = minSuppres.convertToByteProcessor();
-		ByteProcessor temp = en.convertToByteProcessor();
-		temp.copyBits(minSuppres2, 0, 0, Blitter.MULTIPLY);
-		FloatProcessor temp2 = temp.convertToFloatProcessor();
-		temp2.resetMinAndMax();
+		FloatProcessor temp = en.convertToFloatProcessor();
+		temp.copyBits(minSuppres, 0, 0, Blitter.MULTIPLY);
 		
 		//Detect edges
 		Canny canny = new Canny(.4, .7, Math.sqrt(2));
-		ImageProcessor e = canny.canny(temp2);
-		
-		Binary binFilt = new Binary();
-		binFilt.setup("fill holes", null);
-		e.invert();
-		binFilt.run(e);
-		e.invert();
+		ImageProcessor e = canny.canny(temp);
+	
 		//dilate the image
-		filter.rank(e, 8, RankFilters.MAX);
-		e.invert();
-		binFilt.run(e);
-		e.invert();
+		filter.rank(e, 10, RankFilters.MAX);
+		
+		e = bwAreaOpen(e, 500);
+		e = bwAreaOpen(e, 300);
 		
 		//opening!
 		/*
@@ -86,6 +82,7 @@ public class Segmentator {
 		e.invert();
 		*/
 		
+		System.out.println("finding cells");
 		//find all cells
 		e.invert();
 		ImagePlus imp = new ImagePlus("Temp", e.duplicate());
@@ -96,34 +93,40 @@ public class Segmentator {
 		ParticleAnalyzer pa = new ParticleAnalyzer(ParticleAnalyzer.SHOW_RESULTS, 0, blobs, min_size, max_size);
 		pa.analyze(imp);
 		
-		//fill holes
-		/*
+		Binary binFilt = new Binary();
+		binFilt.setup("fill holes", null);
 		e.invert();
-		binFilt.run(e);
+		binFilt.run(e);	
 		e.invert();
-		*/
 		
 		//filter.rank(e, 5, RankFilters.OPEN);
 		
 		//smoothing
 		//may want to make better
-		ImageProcessor presmooth = e.convertToFloatProcessor();
-		ImageProcessor presmooth1 = presmooth.duplicate();
+		ImageProcessor tempSmooth = e.convertToFloatProcessor();
+		tempSmooth.resetMinAndMax();
+		tempSmooth.multiply(1.0/tempSmooth.getMax());
+		tempSmooth.resetMinAndMax();
+		ImageProcessor presmooth1 = tempSmooth.duplicate();
 		
-		//workaround: adding is technically incorrect but
-		//it works for now
-		filter.rank(presmooth, 5, RankFilters.OPEN);
 		ImageProcessor adj = adjImg.convertToFloatProcessor();
-		presmooth.copyBits(adj, 0, 0, Blitter.ADD);
-		presmooth.blurGaussian(10);
-		ImageProcessor smooth = presmooth.convertToByteProcessor(true);
+		adj.resetMinAndMax();
+		if(adj.getMax() > 0.0) adj.multiply(1.0/adj.getMax());
+		adj.resetMinAndMax();
+
+		tempSmooth.copyBits(adj, 0, 0, Blitter.MULTIPLY);
+		tempSmooth.blurGaussian(10);
+		tempSmooth.setMinAndMax(0, 1.0);
+		
+		ImageProcessor smooth = tempSmooth.convertToByteProcessor(true);
 		
 		//determine maxima of smoothed image
 		ImageProcessor mask = genMask(smooth.getWidth(), smooth.getHeight(), 40);
 		smooth.copyBits(mask, 0, 0, Blitter.AND);
 		MaximumFinder maxFind = new MaximumFinder();
-		ImageProcessor maximas = maxFind.findMaxima(smooth, 1, 50, MaximumFinder.IN_TOLERANCE, true, false);
-		
+		ImageProcessor maximas = maxFind.findMaxima(smooth, 0, 0, MaximumFinder.IN_TOLERANCE, true, false);
+
+		System.out.println("finding maxima");
 		maximas.invert();
 		ImagePlus maxImp = new ImagePlus("Temp", maximas.duplicate());
 		maximas.invert();
@@ -145,15 +148,31 @@ public class Segmentator {
 		ImageProcessor imc = input.getOrig().getProcessor().duplicate();
 		imc.invert();
 		
+		System.out.println("finding connected components");
 		//find connected components
+		boundaries.invert();
+		ImagePlus conComp = new ImagePlus("Temp", boundaries.convertToByteProcessor());
+		boundaries.invert();
+		ResultsTable cc = new ResultsTable();
+		min_size = 0.0;
+		max_size = Double.POSITIVE_INFINITY;
+		pa = new ParticleAnalyzer(ParticleAnalyzer.SHOW_RESULTS, 0, cc, min_size, max_size);
+		pa.analyze(conComp);
 		
+		/*
+		//do something to find minimum heights
+		double[] hMin = new double[m.getCounter()];
+		for(int i = 0; i < m.getCounter(); i++){
+			//hMin[i] = .25*
+		}
+		*/
 		
-		
-		
+		ImageProcessor result = new ByteProcessor(input.getOrig().getWidth(), input.getOrig().getHeight());
+
 		
 		System.out.println("Time elapsed: " + (System.nanoTime() - begin)/1000000000.0 + " seconds");
 		//e = e.convertToFloat();
-		return new ImagePlus("Hello", maximas); //TODO: change when completed testing
+		return new ImagePlus("Hello", conComp.getProcessor()); //TODO: change when completed testing
 	}
 	
 	/**
@@ -196,6 +215,70 @@ public class Segmentator {
 		bp.copyBits(src, offset, offset, Blitter.ADD);
 		
 		return bp;
+	}
+	
+	/**
+	 * Perform watershedding!
+	 * @param region
+	 * @param minBright
+	 * @param minHeight
+	 * @return
+	 */
+	private ImageProcessor regionTight(ImageProcessor region, int minBright, int minHeight){
+		ImageProcessor mask = region.convertToByteProcessor(false);
+		mask.blurGaussian(2.5);
+		mask.threshold(minBright);
+		bwAreaOpen(mask, 1000);
+		mask.invert();
+		bwAreaOpen(mask, 1000);
+		mask.invert();
+		
+		ImageProcessor s = region.duplicate();
+		s.invert();
+		s.blurGaussian(3.0);
+		s.resetMinAndMax();
+		s.subtract(s.getMin());
+		s.resetMinAndMax();
+		if(s.getMax() > 0.0) s.multiply(1 / s.getMax());
+		
+		ImageProcessor w = s.convertToByte(false);
+		w.invert();
+		
+		MaximumFinder mf = new MaximumFinder();
+		//not sure if this is correct
+		w = mf.findMaxima(s, 0.0, 255 - minHeight, MaximumFinder.SEGMENTED , false, false);
+		w.invert();
+		
+		w.threshold(0);
+		
+		mask.copyBits(w, 0, 0, Blitter.AND);
+		
+		bwAreaOpen(mask, 200);
+		
+		Binary binFilt = new Binary();
+		binFilt.setup("fill holes", null);
+		mask.invert();
+		binFilt.run(mask);
+		mask.invert();
+		
+		return mask;
+		
+	}
+	
+	/**
+	 * removes areas smaller than size
+	 * @param region
+	 * @param size
+	 */
+	private ImageProcessor bwAreaOpen(ImageProcessor region, int size){
+		ImageProcessor result = region.duplicate();
+		result.invert();
+		ImagePlus ip = new ImagePlus("Temp", result);
+		ParticleAnalyzer pa = new ParticleAnalyzer(ParticleAnalyzer.SHOW_MASKS + ParticleAnalyzer.IN_SITU_SHOW, 
+				0, new ResultsTable(), size, Double.POSITIVE_INFINITY);
+		pa.analyze(ip);
+		result.invert();
+		return result;
 	}
 	
 }
