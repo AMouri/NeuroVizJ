@@ -137,7 +137,7 @@ public class Segmentator {
 		}
 		
 		//determine boundaries
-		ImageProcessor boundaries = presmooth1.duplicate();
+		ImageProcessor boundaries = e.duplicate();
 		boundaries.invert();
 		ImageProcessor tempBoundaries = boundaries.duplicate();
 		filter.rank(tempBoundaries, 1.5, RankFilters.MIN);
@@ -158,22 +158,21 @@ public class Segmentator {
 		
 		System.out.println("finding connected components");
 		//find connected components
-		boundaries = boundaries.convertToByteProcessor(true);
-		boundaries.threshold(0);
-		boundaries.invert();
-		ImagePlus conComp = new ImagePlus("Temp", boundaries.duplicate());
+		ImageProcessor boundariesTemp = boundaries.convertToByteProcessor(true);
+		boundariesTemp.threshold(0);
+		boundariesTemp.invert();
+		ImagePlus conComp = new ImagePlus("Temp", boundariesTemp.duplicate());
 		boundaries.invert();
 		ResultsTable cc = new ResultsTable();
 		min_size = 0.0;
 		max_size = Double.POSITIVE_INFINITY;
 		pa = new ParticleAnalyzer(ParticleAnalyzer.IN_SITU_SHOW | ParticleAnalyzer.SHOW_ROI_MASKS | ParticleAnalyzer.SHOW_RESULTS, 0, cc, min_size, max_size);
 		pa.analyze(conComp);
-		boundaries = conComp.getProcessor().convertToByteProcessor();
+		//boundaries = conComp.getProcessor().convertToByteProcessor();
 		
 		//do something to find minimum heights
 		//has to be a faster way
 		double[] hMin = new double[maximList.size()];
-		ImageProcessor some_result = new FloatProcessor(1000, 1000);
 		for(int i = 0; i < maximList.size(); i++){
 			int curr = belongs[i];
 			FloatProcessor tempBound = new FloatProcessor(boundaries.getWidth(), boundaries.getHeight());
@@ -189,7 +188,6 @@ public class Segmentator {
 			ImageProcessor om = imc.duplicate();
 			om.multiply(1.0/255);
 			om.copyBits(tempBound, 0, 0, Blitter.MULTIPLY);
-			some_result = om;
 			
 			ImageStatistics stats = om.getStatistics();
 			hMin[i] = .25*stats.mean*boundaries.getWidth()*boundaries.getHeight()/(area);
@@ -201,7 +199,7 @@ public class Segmentator {
 		
 		System.out.println("Time elapsed: " + (System.nanoTime() - begin)/1000000000.0 + " seconds");
 		//e = e.convertToFloat();
-		return new ImagePlus("Hello", some_result); //TODO: change when completed testing
+		return new ImagePlus("Hello", result); //TODO: change when completed testing
 	}
 	
 	/**
