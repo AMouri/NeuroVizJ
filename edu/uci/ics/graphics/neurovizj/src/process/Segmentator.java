@@ -194,12 +194,46 @@ public class Segmentator {
 			System.out.println(hMin[i]);
 		}
 		
-		ImageProcessor result = new ByteProcessor(input.getOrig().getWidth(), input.getOrig().getHeight());
+		ImageProcessor tempMask = new FloatProcessor(input.getOrig().getWidth(), input.getOrig().getHeight());
+		ImageProcessor threshSmooth = presmooth1.convertToByteProcessor();
+		threshSmooth.threshold(0);
+		
+		List<BoundaryBox> bbs = BoundaryBox.getBoundaries(threshSmooth);
+		
+		for(int i = 0; i < maximList.size(); i++){
+			int curr = belongs[i];
+			BoundaryBox bb = bbs.get(curr);
+			int[] bbSize = {bb.getWidth(), bb.getHeight()};
+			BoundaryBox boundBox = BoundaryBox.clip(new BoundaryBox(
+					maximList.get(i).getX() - bbSize[0] - 80, maximList.get(i).getY() - bbSize[1] - 80, 2*bbSize[0]+160, 2*bbSize[1]+160),
+					0, 0, input.getOrig().getWidth() - 1, input.getOrig().getHeight() - 1);
+			ImageProcessor zz = new FloatProcessor(input.getOrig().getWidth(), input.getOrig().getHeight());
+			ImageProcessor im = input.getOrig().getProcessor().duplicate();
+			im.setRoi(boundBox.getX(), boundBox.getY(), boundBox.getX() + boundBox.getWidth(), boundBox.getY() + boundBox.getHeight());
+			ImageProcessor interest = im.crop();
+			//System.out.println(bb.getWidth() + " " + bb.getHeight());
+			
+			zz.copyBits(regionTight(interest, 255*.1, hMin[i]*255), boundBox.getX(), boundBox.getY(), Blitter.COPY);
+			if(zz.get(maximList.get(i).getX(), maximList.get(i).getY()) != 0){
+				int num = zz.get(maximList.get(i).getX(), maximList.get(i).getY());
+				for(int j = 0; j < zz.getWidth(); j++){
+					for(int k = 0; k < zz.getHeight(); k++){
+						if(Float.intBitsToFloat(zz.get(j,k)) == num){
+							tempMask.putPixelValue(j,k,i);
 
+						}
+					}
+				}
+			}
+			tempMask = zz;
+			
+		}
+
+		
 		
 		System.out.println("Time elapsed: " + (System.nanoTime() - begin)/1000000000.0 + " seconds");
 		//e = e.convertToFloat();
-		return new ImagePlus("Hello", result); //TODO: change when completed testing
+		return new ImagePlus("Hello", tempMask); //TODO: change when completed testing
 	}
 	
 	/**
@@ -234,14 +268,13 @@ public class Segmentator {
 	 * @param minHeight
 	 * @return
 	 */
-	private ImageProcessor regionTight(ImageProcessor region, int minBright, int minHeight){
-		ImageProcessor mask = region.convertToByteProcessor(false);
+	private ImageProcessor regionTight(ImageProcessor region, double minBright, double minHeight){
+		ImageProcessor mask = region.convertToByteProcessor(true);
 		mask.blurGaussian(2.5);
-		mask.threshold(minBright);
+		mask.threshold((int) minBright);
 		bwAreaOpen(mask, 1000);
 		mask.invert();
 		bwAreaOpen(mask, 1000);
-		mask.invert();
 		
 		ImageProcessor s = region.duplicate();
 		s.invert();
@@ -256,7 +289,7 @@ public class Segmentator {
 		
 		MaximumFinder mf = new MaximumFinder();
 		//not sure if this is correct
-		w = mf.findMaxima(s, 0.0, 255 - minHeight, MaximumFinder.SEGMENTED , false, false);
+		w = mf.findMaxima(s, minHeight, 0.0, MaximumFinder.SEGMENTED , false, false);
 		w.invert();
 		
 		w.threshold(0);
@@ -271,7 +304,19 @@ public class Segmentator {
 		binFilt.run(mask);
 		mask.invert();
 		
-		return mask;
+		mask.invert();
+		ImagePlus imp = new ImagePlus("Temp", mask.duplicate());
+		mask.invert();
+		ResultsTable blobs = new ResultsTable();
+		Double min_size = 0.0;
+		Double max_size = Double.POSITIVE_INFINITY;
+		ParticleAnalyzer pa = new ParticleAnalyzer(ParticleAnalyzer.IN_SITU_SHOW | ParticleAnalyzer.SHOW_ROI_MASKS | ParticleAnalyzer.SHOW_RESULTS, 0, blobs, min_size, max_size);
+		pa.analyze(imp);
+		mask = imp.getProcessor();
+		
+		//new ImagePlus("nom", mask).show();
+		
+		return w;
 		
 	}
 	
