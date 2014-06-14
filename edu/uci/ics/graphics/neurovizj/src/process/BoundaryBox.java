@@ -43,7 +43,6 @@ public class BoundaryBox {
 		int endX = Math.min(Math.max(minX, bb.getX()+bb.getWidth()), maxX);
 		int endY = Math.min(Math.max(minY, bb.getY()+bb.getHeight()), maxY);
 		
-		System.out.println(bb.getWidth() + " " + bb.getHeight());
 		return new BoundaryBox(newX, newY, endX-newX, endY-newY);
 		
 		
@@ -51,11 +50,12 @@ public class BoundaryBox {
 	
 	public static List<BoundaryBox> getBoundaries(ImageProcessor im){
 		List<BoundaryBox> result = new ArrayList<BoundaryBox>();
+		im.resetMinAndMax();
 		im.invert();
 		ImagePlus bb = new ImagePlus("Temp", im.duplicate());
 		im.invert();
 		ResultsTable bbs = new ResultsTable();
-		ParticleAnalyzer pa = new ParticleAnalyzer(ParticleAnalyzer.IN_SITU_SHOW | ParticleAnalyzer.SHOW_RESULTS, Measurements.RECT, bbs, 0.0, Double.POSITIVE_INFINITY);
+		ParticleAnalyzer pa = new ParticleAnalyzer(ParticleAnalyzer.SHOW_RESULTS, Measurements.RECT, bbs, 0.0, Double.POSITIVE_INFINITY);
 		pa.analyze(bb);
 		
 		for(int i = 0; i < bbs.getCounter(); i++){
@@ -63,5 +63,9 @@ public class BoundaryBox {
 		}
 		
 		return result;
+	}
+	
+	public String toString(){
+		return "LU: " + ul.toString() + ", " + width + " x " + height;
 	}
 }
