@@ -2,6 +2,7 @@ package edu.uci.ics.graphics.neurovizj.src.process;
 
 import ij.IJ;
 import ij.ImagePlus;
+import ij.plugin.ContrastEnhancer;
 import ij.plugin.filter.RankFilters;
 import ij.process.ImageProcessor;
 import ij.process.ImageStatistics;
@@ -15,6 +16,7 @@ public class InputImage {
 	
 	private ImagePlus origImg;
 	private ImagePlus adjImg;
+	private ContrastEnhancer enhance = new ContrastEnhancer();
 	
 	/**
 	 * Loads image located at path and stores useful processed variations of the image
@@ -36,14 +38,7 @@ public class InputImage {
 		RankFilters medFilt = new RankFilters();
 		medFilt.rank(adjProc, 1.5, RankFilters.MEDIAN);
 		
-		//map pixel intensities from 0-255 to 5.1-249.9
-		//currently a bit bright, leaving alone for now
-		/*
-		adjProc.multiply((249.9 - 5.1)/255);
-		adjProc.add(5.1);
-		*/
-		
-		//TODO, image is a bit bright
+		enhance.stretchHistogram(adjProc, 4);
 		
 		adjImg = new ImagePlus("test.png", adjProc);
 	}
