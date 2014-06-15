@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import ij.ImagePlus;
+import ij.gui.Wand;
 import ij.measure.Measurements;
 import ij.measure.ResultsTable;
 import ij.plugin.filter.ParticleAnalyzer;
@@ -48,18 +49,27 @@ public class BoundaryBox {
 		
 	}
 	
-	public static List<BoundaryBox> getBoundaries(ImageProcessor im){
+	public static List<BoundaryBox> getBoundaries(ImageProcessor im, List<Point> maximPoints){
 		List<BoundaryBox> result = new ArrayList<BoundaryBox>();
-		im.resetMinAndMax();
-		im.invert();
-		ImagePlus bb = new ImagePlus("Temp", im.duplicate());
-		im.invert();
-		ResultsTable bbs = new ResultsTable();
-		ParticleAnalyzer pa = new ParticleAnalyzer(ParticleAnalyzer.SHOW_RESULTS, Measurements.RECT, bbs, 0.0, Double.POSITIVE_INFINITY);
-		pa.analyze(bb);
 		
-		for(int i = 0; i < bbs.getCounter(); i++){
-			result.add(new BoundaryBox((int) bbs.getValueAsDouble(bbs.getColumnIndex("BX"),i), (int) bbs.getValueAsDouble(bbs.getColumnIndex("BY"),i), (int) bbs.getValueAsDouble(bbs.getColumnIndex("Width"),i), (int) bbs.getValueAsDouble(bbs.getColumnIndex("Height"),i)));
+		Wand wand = new Wand(im);
+		for(int i = 0; i < maximPoints.size(); i++){
+			Point p = maximPoints.get(i);
+			wand.autoOutline(p.getX(), p.getY());
+			int minX, minY, maxX, maxY;
+			minX = Integer.MAX_VALUE;
+			minY = Integer.MAX_VALUE;
+			maxX = 0;
+			maxY = 0;
+			for(int j = 0; j < wand.npoints; j++){
+				int x = wand.xpoints[j];
+				int y = wand.ypoints[j];
+				minX = Math.min(minX, x);
+				maxX = Math.max(maxX, x);
+				minY = Math.min(minY, y);
+				maxY = Math.max(maxY, y);
+			}
+			result.add(new BoundaryBox(minX, minY, maxX-minX, maxY-minY));
 		}
 		
 		return result;
