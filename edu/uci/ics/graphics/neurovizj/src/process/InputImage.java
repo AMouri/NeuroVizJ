@@ -1,6 +1,5 @@
 package edu.uci.ics.graphics.neurovizj.src.process;
 
-import ij.IJ;
 import ij.ImagePlus;
 import ij.plugin.ContrastEnhancer;
 import ij.plugin.filter.RankFilters;

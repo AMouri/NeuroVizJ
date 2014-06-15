@@ -3,11 +3,7 @@ package edu.uci.ics.graphics.neurovizj.src.process;
 import java.util.ArrayList;
 import java.util.List;
 
-import ij.ImagePlus;
 import ij.gui.Wand;
-import ij.measure.Measurements;
-import ij.measure.ResultsTable;
-import ij.plugin.filter.ParticleAnalyzer;
 import ij.process.ImageProcessor;
 
 public class BoundaryBox {
@@ -19,6 +15,32 @@ public class BoundaryBox {
 		this.ul = new Point(x,y);
 		this.width = width;
 		this.height = height;
+	}
+	
+	/**
+	 * Constructs a boundary box at p in ip.
+	 * @param p
+	 * @param ip
+	 */
+	BoundaryBox(Point p, ImageProcessor ip){
+		Wand wand = new Wand(ip);
+		wand.autoOutline(p.getX(), p.getY());
+		int minX, minY, maxX, maxY;
+		minX = Integer.MAX_VALUE;
+		minY = Integer.MAX_VALUE;
+		maxX = 0;
+		maxY = 0;
+		for(int j = 0; j < wand.npoints; j++){
+			int x = wand.xpoints[j];
+			int y = wand.ypoints[j];
+			minX = Math.min(minX, x);
+			maxX = Math.max(maxX, x);
+			minY = Math.min(minY, y);
+			maxY = Math.max(maxY, y);
+		}
+		this.ul = new Point(minX, minY);
+		this.width = maxX - minX;
+		this.height = maxY - minY;
 	}
 	
 	public int getWidth(){
@@ -52,24 +74,8 @@ public class BoundaryBox {
 	public static List<BoundaryBox> getBoundaries(ImageProcessor im, List<Point> maximPoints){
 		List<BoundaryBox> result = new ArrayList<BoundaryBox>();
 		
-		Wand wand = new Wand(im);
 		for(int i = 0; i < maximPoints.size(); i++){
-			Point p = maximPoints.get(i);
-			wand.autoOutline(p.getX(), p.getY());
-			int minX, minY, maxX, maxY;
-			minX = Integer.MAX_VALUE;
-			minY = Integer.MAX_VALUE;
-			maxX = 0;
-			maxY = 0;
-			for(int j = 0; j < wand.npoints; j++){
-				int x = wand.xpoints[j];
-				int y = wand.ypoints[j];
-				minX = Math.min(minX, x);
-				maxX = Math.max(maxX, x);
-				minY = Math.min(minY, y);
-				maxY = Math.max(maxY, y);
-			}
-			result.add(new BoundaryBox(minX, minY, maxX-minX, maxY-minY));
+			result.add(new BoundaryBox(maximPoints.get(i), im));
 		}
 		
 		return result;
