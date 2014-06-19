@@ -16,6 +16,9 @@ import ij.process.Blitter;
 import ij.process.ByteProcessor;
 import ij.process.FloatProcessor;
 import ij.process.ImageProcessor;
+import matlabcontrol.*;
+import matlabcontrol.extensions.MatlabNumericArray;
+import matlabcontrol.extensions.MatlabTypeConverter;
 
 /**
  * This class will perform segmentation on an image
@@ -28,6 +31,8 @@ public class Segmentator {
 	private Canny canny = new Canny(.4, .7, Math.sqrt(2));
 	private Binary binFilt = new Binary();
 	private ContrastEnhancer enhance = new ContrastEnhancer();
+	private MatlabProxy proxy;
+	private MatlabTypeConverter processor;
 	
 	/**
 	 * Directions for canny edge detection
@@ -40,8 +45,11 @@ public class Segmentator {
 	 * @param path
 	 * @return
 	 */
-	public ImagePlus segment(String path){
+	public ImagePlus segment(String path, MatlabProxy matProxy, MatlabTypeConverter matProcessor){
+		System.out.println("Begin");
 		long begin = System.nanoTime();
+		proxy = matProxy;
+		processor = matProcessor;
 		
 		InputImage input = new InputImage(path);
 		ImageProcessor origImg = input.getOrig().getProcessor();
@@ -80,7 +88,6 @@ public class Segmentator {
 		ImageProcessor boundaries = findBoundaries(e);		
 		
 		//The ith maximum belongs to the jth cell (belongs[i] = j)
-		//may want to have data structure so that the link is more clear
 		Hashtable<Point, BoundaryBox> belongs = new Hashtable<Point, BoundaryBox>();
 		for(int i = 0; i < maximList.size(); i++){
 			Point p = maximList.get(i);
@@ -92,16 +99,20 @@ public class Segmentator {
 		
 		boundaries = findConnectedComponents(boundaries);
 		
-		double[] hMin = findhMin(maximList, belongs, width, height, boundaries, imc);
+		double[] hMin = findhMin(maximList, belongs, width, height, boundaries, imc, presmooth1);
+		for(int i = 0; i < hMin.length; i++){
+			System.out.println(hMin[i]);
+		}
 		
 		ImageProcessor threshSmooth = presmooth1.convertToByteProcessor(true);
 		threshSmooth.threshold(0);
 		
 		List<BoundaryBox> bbs = BoundaryBox.getBoundaries(threshSmooth, maximList);
-		
-		ImageProcessor mask = performWatershedding(maximList, bbs, width, height, hMin, origImg);
-		
 		System.out.println("Time elapsed: " + (System.nanoTime() - begin)/1000000000.0 + " seconds");
+		ImageProcessor mask = performWatershedding(maximList, bbs, width, height, hMin, origImg);
+		System.out.println("Time elapsed: " + (System.nanoTime() - begin)/1000000000.0 + " seconds");
+		
+		//System.out.println("Time elapsed: " + (System.nanoTime() - begin)/1000000000.0 + " seconds");
 		return new ImagePlus("Hello", mask); //TODO: change when completed testing
 	}
 	
@@ -137,40 +148,82 @@ public class Segmentator {
 	 * @param minHeight
 	 * @return
 	 */
-	private ImageProcessor regionTight(ImageProcessor region, int minBright, double minHeight){
+	private ImageProcessor regionTight(ImageProcessor region, double minBright, double minHeight, int width, int height){
+//		region.resetMinAndMax();
+//		ImageProcessor mask = region.convertToByteProcessor(true);
+//		enhance.setNormalize(true);
+//		enhance.stretchHistogram(mask, 1);
+//		mask.blurGaussian(2.5);
+//		mask.threshold(minBright);
+//		mask = bwAreaOpen(mask, 1000);
+//		mask.invert();
+//		mask = bwAreaOpen(mask, 1000);
+//		mask.invert();
+//
+//		ImageProcessor s = region.convertToFloatProcessor();
+//		s.invert();
+//		s.blurGaussian(3.0);
+//		s.resetMinAndMax();
+//		s.subtract(s.getMin());
+//		s.resetMinAndMax();
+//		if(s.getMax() > 0.0) s.multiply(1.0 / s.getMax());
+//		
+//		s.resetMinAndMax();
+////		//ImageProcessor w = s.convertToByteProcessor(true);
+		region = region.convertToFloat();
 		region.resetMinAndMax();
-		ImageProcessor mask = region.convertToByteProcessor(true);
-		enhance.stretchHistogram(mask, 2);
-		mask.blurGaussian(1.5);
-		mask.threshold(minBright);
-		mask = bwAreaOpen(mask, 1000);
-		mask.invert();
-		mask = bwAreaOpen(mask, 1000);
-		mask.invert();
+		region.multiply(1.0 / region.getMax());
+		region.resetMinAndMax();
+		ImageProcessor w = new ByteProcessor(width, height);
+//		//matlab version
+		try{
+			double[][] mat = new double[width][height];
+			for(int i = 0; i < width; i++){
+				for(int j = 0; j < height; j++){
+					mat[i][j] = Float.intBitsToFloat(region.get(i,j));
+				}
+			}
+	
+		    processor.setNumericArray("region", new MatlabNumericArray(mat, null));
+		    proxy.eval("minHeight = " + minHeight + ";");
+		    proxy.eval("minBrightness = " + minBright + ";");
+		    proxy.eval("mask = imfilter(imadjust(region), fspecial('gaussian', [5 5],2.5))> minBrightness;");
+		    proxy.eval("mask = ~bwareaopen(mask,1000);");
+		    proxy.eval("mask = ~bwareaopen(mask,1000);");
+		    proxy.eval("s = imfilter(imcomplement(region),fspecial('gaussian',[20 20],3.0));");
+		    proxy.eval("s = s - min(s(:));");
+		    proxy.eval("s = s / max(s(:));");
+		    proxy.eval("w = watershed(imhmin(s,minHeight));");
+		    proxy.eval("Final = imfill(bwareaopen(mask & (w~=0), 200) , 'holes');");
+		    boolean[] javaArray = (boolean[]) proxy.getVariable("Final");
+		    for(int i = 0; i < height; i++){
+		    	for(int j = 0; j < width; j++){
+		    		boolean val = javaArray[i*width + j];
+		    		w.set(j, i, val ? 255 : 0);
+		    	}
+		    }
+		} catch (Exception e){
+			e.printStackTrace();
+			System.exit(0);
+		}
 		
-		ImageProcessor s = region.convertToFloatProcessor();
-		s.invert();
-		s.blurGaussian(3.0);
-		s.resetMinAndMax();
-		s.subtract(s.getMin());
-		s.resetMinAndMax();
-		if(s.getMax() > 0.0) s.multiply(1.0 / s.getMax());
-		
-		s.resetMinAndMax();
-		ImageProcessor w = s.convertToByteProcessor(true);
-		
-		MaximumFinder mf = new MaximumFinder();
-		w = hMinima(w, (int) minHeight);
-		w = mf.findMaxima(w, 1.0, 1.0, MaximumFinder.SEGMENTED , false, false);
-		
-		w.threshold(0);
-		
-		mask.copyBits(w, 0, 0, Blitter.AND);
-		
-		mask = bwAreaOpen(mask, 200);
-		
-		fillHoles(mask);
-		return setLabels(mask);
+//		/*
+//		MaximumFinder mf = new MaximumFinder();
+//		w = hMinima(w, (int) minHeight);	
+//		w = mf.findMaxima(w, 1.0, 1.0, MaximumFinder.SEGMENTED , false, false);
+//		*/
+//		
+//		w.threshold(0);
+//		
+//		mask.copyBits(w, 0, 0, Blitter.AND);
+//		
+//		mask = bwAreaOpen(mask, 200);
+//		
+//		fillHoles(mask);
+//		return setLabels(mask);
+//		return s;
+//		return w;
+		return setLabels(w);
 		
 	}
 	
@@ -188,6 +241,8 @@ public class Segmentator {
 		Object[] result = gr.exec(new ImagePlus("temp", ip), new ImagePlus("temp1", ip1), "null", true, false);
 		ip.invert();
 		return ((ImagePlus) result[1]).getProcessor();
+		
+		//call matlab
 	}
 	
 	/**
@@ -196,12 +251,13 @@ public class Segmentator {
 	 * @param size
 	 */
 	private ImageProcessor bwAreaOpen(ImageProcessor region, int size){
-		ImageProcessor result = region.duplicate();
+		ImageProcessor result = region.convertToByteProcessor();
+		result.threshold(0);
 		result.invert();
 		ImagePlus ip = new ImagePlus("Temp", result);
 		ParticleAnalyzer pa = new ParticleAnalyzer(ParticleAnalyzer.IN_SITU_SHOW | ParticleAnalyzer.SHOW_MASKS, 
 				0, new ResultsTable(), size, Double.POSITIVE_INFINITY);
-		pa.analyze(ip);
+		pa.analyze(ip);	
 		result = ip.getProcessor();
 		result.invertLut();
 		return result;
@@ -218,7 +274,7 @@ public class Segmentator {
 		ImageProcessor adjImg = adjusted.duplicate();
 		adjImg.threshold(51);
 				
-		//now median filter with a 5x5 kernel to smooth the mask
+		//now median filter with a 5x5 kernel to denoise
 		
 		filter.rank(adjImg, 2, RankFilters.MEDIAN);
 				
@@ -325,7 +381,7 @@ public class Segmentator {
 	private ImageProcessor findConnectedComponents(ImageProcessor ip){
 		ImageProcessor boundariesTemp = ip.convertToByteProcessor(true);
 		boundariesTemp.threshold(0);
-		return setLabels(ip);
+		return setLabels(boundariesTemp);
 	}
 	
 	/**
@@ -347,9 +403,8 @@ public class Segmentator {
 	}
 	
 	private double[] findhMin(List<Point> maximList, Hashtable<Point, BoundaryBox> belongs, int width, int height, 
-			ImageProcessor boundaries, ImageProcessor imc){
+			ImageProcessor boundaries, ImageProcessor imc, ImageProcessor ref){
 		
-		//TODO: make faster
 		double[] hMin = new double[maximList.size()];
 		for(int i = 0; i < maximList.size(); i++){
 			Point maxim = maximList.get(i);
@@ -357,12 +412,13 @@ public class Segmentator {
 			int area = 0;
 			float tot = 0;
 			
+			float color = Float.intBitsToFloat(ref.get(maxim.getX(), maxim.getY()));
+			
 			for(int j = bb.getX(); j < bb.getX() + bb.getWidth(); j++){
 				for(int k = bb.getY(); k < bb.getY() + bb.getHeight(); k++){
-					if(boundaries.get(j,k) != 0.0){
+					if(boundaries.get(j,k) == color){
 						tot += (Float.intBitsToFloat(imc.get(j,k))/255.0);
 						area++;
-						//System.out.println(tot);
 					}
 				}
 			}
@@ -378,33 +434,44 @@ public class Segmentator {
 		ImageProcessor tempMask = new ByteProcessor(width, height);
 		for(int i = 0; i < maximList.size(); i++){
 			BoundaryBox bb = bbs.get(i);
-			int[] bbSize = {bb.getWidth(), bb.getHeight()};
 			BoundaryBox boundBox = BoundaryBox.clip(new BoundaryBox(
-					maximList.get(i).getX() - bbSize[0] - 80, 
-					maximList.get(i).getY() - bbSize[1] - 80, 
-					2*bbSize[0]+160, 2*bbSize[1]+160),
+					maximList.get(i).getX() - bb.getWidth() - 80, 
+					maximList.get(i).getY() - bb.getHeight() - 80, 
+					2*bb.getWidth()+160, 2*bb.getHeight()+160),
 					0, 0, width - 1, height - 1);
-			ImageProcessor window = new FloatProcessor(width, height);
-			ImageProcessor im = origImg.duplicate();
+			ImageProcessor window = new ByteProcessor(width, height);
+			ImageProcessor im = origImg;
 			im.setRoi(boundBox.getX(), boundBox.getY(), boundBox.getWidth(), boundBox.getHeight());
 			ImageProcessor interest = im.crop();
-			window.copyBits(regionTight(interest, 28, hMin[i]*255), boundBox.getX(), boundBox.getY(), Blitter.COPY);
+			window.copyBits(regionTight(interest, .1, hMin[i], boundBox.getWidth(), boundBox.getHeight()), boundBox.getX(), boundBox.getY(), Blitter.COPY);
 			if(window.get(maximList.get(i).getX(), maximList.get(i).getY()) != 0){
-				float num = Float.intBitsToFloat(window.get(maximList.get(i).getX(), maximList.get(i).getY()));
+				float num = window.get(maximList.get(i).getX(), maximList.get(i).getY());
 				for(int j = boundBox.getX(); j < boundBox.getX() + boundBox.getWidth(); j++){
 					for(int k = boundBox.getY(); k < boundBox.getY() + boundBox.getHeight(); k++){
-						if(Float.intBitsToFloat(window.get(j,k)) == num){
+						if(window.get(j,k) == num){
 							tempMask.putPixelValue(j,k,255);
 						}
 					}
 				}
 			}
+//				for(int j = boundBox.getX(); j < boundBox.getX() + boundBox.getWidth(); j++){
+//					for(int k = boundBox.getY(); k < boundBox.getY() + boundBox.getHeight(); k++){
+//							tempMask.putPixelValue(j,k,window.get(j,k));
+//					}
+//				}
+			im.resetRoi();
 		}
-		ImageProcessor mask = origImg.duplicate();
-		mask.threshold(28);
+		ImageProcessor mask = findConnectedComponents(tempMask);
+		mask.threshold(0);
+		ImageProcessor temp = origImg.duplicate();
+		temp.threshold(25);
+		mask.copyBits(temp, 0, 0, Blitter.AND);
 		mask.copyBits(tempMask, 0, 0, Blitter.AND);
+		mask.threshold(0);
 		mask = setLabels(bwAreaOpen(mask, 800));
+//		mask.threshold(0);
 		return mask;
+//		return tempMask;
 	}
 		
 }

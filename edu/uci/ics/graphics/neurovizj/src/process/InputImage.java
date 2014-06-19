@@ -37,6 +37,7 @@ public class InputImage {
 		RankFilters medFilt = new RankFilters();
 		medFilt.rank(adjProc, 1.5, RankFilters.MEDIAN);
 		
+//		enhance.setNormalize(true);
 		enhance.stretchHistogram(adjProc, 4);
 		
 		adjImg = new ImagePlus("test.png", adjProc);

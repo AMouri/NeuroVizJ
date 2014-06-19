@@ -1,5 +1,8 @@
 package edu.uci.ics.graphics.neurovizj.src.main;
 
+import matlabcontrol.MatlabProxy;
+import matlabcontrol.MatlabProxyFactory;
+import matlabcontrol.extensions.MatlabTypeConverter;
 import edu.uci.ics.graphics.neurovizj.src.process.Segmentator;
 import ij.IJ;
 import ij.io.Opener;
@@ -25,8 +28,17 @@ public class Main {
 		if(segment){
 			Opener opener = new Opener();
 			Segmentator segmentator = new Segmentator();
-			IJ.save(segmentator.segment(iName), oName); //TODO: remove when finished testing
-			opener.open("test.png");
+			try{
+				MatlabProxyFactory factory = new MatlabProxyFactory();
+				MatlabProxy proxy = factory.getProxy();
+				MatlabTypeConverter processor = new MatlabTypeConverter(proxy);
+				IJ.save(segmentator.segment(iName, proxy, processor), oName); //TODO: remove when finished testing
+//				IJ.save(segmentator.segment(iName, null, null), oName); //TODO: remove when finished testing
+				opener.open(oName);
+				proxy.disconnect();
+			} catch(Exception e){
+				e.printStackTrace();
+			}
 		}
 	}
 
