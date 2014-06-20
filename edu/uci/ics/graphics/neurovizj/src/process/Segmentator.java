@@ -34,22 +34,19 @@ public class Segmentator {
 	private MatlabProxy proxy;
 	private MatlabTypeConverter processor;
 	
-	/**
-	 * Directions for canny edge detection
-	 * @author Alec
-	 *
-	 */
+	public Segmentator(MatlabProxy proxy, MatlabTypeConverter processor){
+		this.proxy = proxy;
+		this.processor = processor;
+	}
 	
 	/**
 	 * Segments the image located at path
 	 * @param path
 	 * @return
 	 */
-	public ImagePlus segment(String path, MatlabProxy matProxy, MatlabTypeConverter matProcessor){
+	public ImagePlus segment(String path){
 		System.out.println("Begin");
 		long begin = System.nanoTime();
-		proxy = matProxy;
-		processor = matProcessor;
 		
 		InputImage input = new InputImage(path);
 		ImageProcessor origImg = input.getOrig().getProcessor();
@@ -113,7 +110,7 @@ public class Segmentator {
 		System.out.println("Time elapsed: " + (System.nanoTime() - begin)/1000000000.0 + " seconds");
 		
 		//System.out.println("Time elapsed: " + (System.nanoTime() - begin)/1000000000.0 + " seconds");
-		return new ImagePlus("Hello", mask); //TODO: change when completed testing
+		return new ImagePlus("Segmented image", mask); //TODO: change when completed testing
 	}
 	
 	/**

@@ -3,8 +3,11 @@ package edu.uci.ics.graphics.neurovizj.src.main;
 import matlabcontrol.MatlabProxy;
 import matlabcontrol.MatlabProxyFactory;
 import matlabcontrol.extensions.MatlabTypeConverter;
+import edu.uci.ics.graphics.neurovizj.src.process.Cell;
 import edu.uci.ics.graphics.neurovizj.src.process.Segmentator;
+import edu.uci.ics.graphics.neurovizj.src.process.SegmentedImage;
 import ij.IJ;
+import ij.ImagePlus;
 import ij.io.Opener;
 
 public class Main {
@@ -27,15 +30,19 @@ public class Main {
 		
 		if(segment){
 			Opener opener = new Opener();
-			Segmentator segmentator = new Segmentator();
 			try{
 				MatlabProxyFactory factory = new MatlabProxyFactory();
 				MatlabProxy proxy = factory.getProxy();
 				MatlabTypeConverter processor = new MatlabTypeConverter(proxy);
-				IJ.save(segmentator.segment(iName, proxy, processor), oName); //TODO: remove when finished testing
+				Segmentator segmentator = new Segmentator(proxy, processor);
+				SegmentedImage result = new SegmentedImage(iName, segmentator);
+				IJ.save(new ImagePlus(oName, result.getImage()), oName); //TODO: remove when finished testing
 //				IJ.save(segmentator.segment(iName, null, null), oName); //TODO: remove when finished testing
 				opener.open(oName);
 				proxy.disconnect();
+				for(Cell cell : result.getCells()){
+					System.out.println(cell);
+				}
 			} catch(Exception e){
 				e.printStackTrace();
 			}

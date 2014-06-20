@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import ij.gui.Wand;
+import ij.measure.ResultsTable;
 import ij.process.ImageProcessor;
 
 public class BoundaryBox {
@@ -15,6 +16,10 @@ public class BoundaryBox {
 		this.ul = new Point(x,y);
 		this.width = width;
 		this.height = height;
+	}
+	
+	BoundaryBox(ResultsTable rt, int row){
+		this((int) rt.getValue("BX", row), (int) rt.getValue("BY", row), (int) rt.getValue("Width", row), (int) rt.getValue("Height", row));
 	}
 	
 	/**
