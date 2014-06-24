@@ -22,6 +22,10 @@ public class Point {
 		return y;
 	}
 	
+	public boolean equals(Object o){
+		return this.x == ((Point) o).getX() && this.y == ((Point) o).getY();
+	}
+	
 	public String toString(){
 		return "(" + x + ", " + y + ")";
 	}

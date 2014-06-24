@@ -1,6 +1,8 @@
 package edu.uci.ics.graphics.neurovizj.src.process;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import ij.ImagePlus;
 import ij.process.ImageProcessor;
@@ -31,6 +33,30 @@ public class SegmentedImage {
 	
 	public List<Cell> getCells(){
 		return cells;
+	}
+	
+	public int getArea(int index){
+		return cells.get(index).getArea();
+	}
+	
+	public double getMean(int index){
+		return cells.get(index).getMean();
+	}
+	
+	public BoundaryBox getBB(int index){
+		return cells.get(index).getBB();
+	}
+	
+	public Point getCentroid(int index){
+		return cells.get(index).getCentroid();
+	}
+	
+	public Set<Point> getPointSet(int index){
+		return cells.get(index).getPointSet();
+	}
+	
+	public int numCells(){
+		return cells.size();
 	}
 	
 	

@@ -3,6 +3,7 @@ package edu.uci.ics.graphics.neurovizj.src.process;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 
 import ij.ImagePlus;
 import ij.gui.PolygonRoi;
@@ -26,12 +27,12 @@ public class Cell {
 	private ImageProcessor origImg;
 	private ImageProcessor segImg;
 	private int id;
-	//private List<Point> boundary;
 	private BoundaryBox bb;
 	
 	private int area;
 	private double mean;
 	private Point centroid;
+	private Set<Point> points;
 	
 	/**
 	 * Makes a cell
@@ -43,15 +44,25 @@ public class Cell {
 	 * @param mean
 	 * @param centroid
 	 */
-	public Cell(String name, ImageProcessor origImg, ImageProcessor segmented, int num, BoundaryBox bb, int area, double mean, Point centroid){
+	public Cell(String name, ImageProcessor origImg, ImageProcessor segmented, int num, 
+			BoundaryBox bb, int area, double mean, Point centroid){
 		imgName = name;
 		this.origImg = origImg;
 		this.segImg = segmented;
-		id = num;
+		this.id = num;
 		this.bb = bb;
 		this.area = area;
 		this.mean = mean;
 		this.centroid = centroid;
+		
+		this.points = new HashSet<Point>();
+		for(int i = bb.getX(); i < bb.getX() + bb.getWidth(); i++){
+			for(int j = bb.getY(); j < bb.getY() + bb.getHeight(); j++){
+				if(segmented.get(i,j) == id){
+					this.points.add(new Point(i,j));
+				}
+			}
+		}
 	}
 	
 	/**
@@ -78,21 +89,37 @@ public class Cell {
 					orig.setRoi(roi);
 					ResultsTable rt = new ResultsTable();
 					Analyzer analyzer = new Analyzer(orig, 
-							Measurements.AREA | Measurements.RECT | Measurements.CENTROID | Measurements.MEAN, rt);
+							Measurements.AREA | Measurements.RECT | Measurements.CENTER_OF_MASS | Measurements.MEAN, rt);
 					analyzer.measure();
 					cells.add(new Cell(imgName, masked, threshSeg, id, 
 							new BoundaryBox(rt, 0), (int) rt.getValue("Area", 0), rt.getValue("Mean", 0), 
-							new Point((int) rt.getValue("X", 0), (int) rt.getValue("Y", 0))));
+							new Point((int) rt.getValue("XM", 0), (int) rt.getValue("YM", 0))));
 					orig.restoreRoi();
 				}
 			}
 		}
-//		for(int i = 0; i < rt.getCounter(); i++){
-//			cells.add(new Cell(imgName, masked,i+1, new BoundaryBox(rt, i), (int) rt.getValue("Area", i), rt.getValue("Mean", i), 
-//					new Point((int) rt.getValue("X", i), (int) rt.getValue("Y", i))));
-//		}
 		
 		return cells;
+	}
+	
+	public int getArea(){
+		return area;
+	}
+	
+	public double getMean(){
+		return mean;
+	}
+	
+	public BoundaryBox getBB(){
+		return bb;
+	}
+	
+	public Point getCentroid(){
+		return centroid;
+	}
+	
+	public Set<Point> getPointSet(){
+		return new HashSet<Point>(points);
 	}
 	
 	public String toString(){
