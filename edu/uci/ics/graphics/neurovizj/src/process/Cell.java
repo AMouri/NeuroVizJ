@@ -29,6 +29,9 @@ public class Cell {
 	private int id;
 	private BoundaryBox bb;
 	
+	private Cell nextCell;
+	private Cell prevCell;
+	
 	private int area;
 	private double mean;
 	private Point centroid;
@@ -122,7 +125,31 @@ public class Cell {
 		return new HashSet<Point>(points);
 	}
 	
+	public Cell getNextCell(){
+		return nextCell;
+	}
+	
+	public Cell getPrevCell(){
+		return prevCell;
+	}
+	
+	public void setNextCell(Cell c){
+		nextCell = c;
+		if(c != null && c.getPrevCell() != this){
+			c.setPrevCell(this);
+		}
+	}
+	
+	public void setPrevCell(Cell c){
+		prevCell = c;
+		if(c != null && c.getNextCell() != this){
+			c.setNextCell(this);
+		}
+	}
+	
+	
 	public String toString(){
-		return "Cell #" + id + " in image " + imgName + " at " + centroid;
+		return "Cell #" + id + " in image " + imgName + " at " + centroid + "becomes Cell #" + 
+				((nextCell != null) ? nextCell.id : "END");
 	}
 }

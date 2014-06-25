@@ -35,28 +35,42 @@ public class SegmentedImage {
 		return cells;
 	}
 	
+	public void setSuccessor(int i, Cell c){
+		getCell(i).setNextCell(c);
+	}
+	
+	public Cell getCell(int i){
+		return cells.get(i);
+	}
+	
 	public int getArea(int index){
-		return cells.get(index).getArea();
+		return getCell(index).getArea();
 	}
 	
 	public double getMean(int index){
-		return cells.get(index).getMean();
+		return getCell(index).getMean();
 	}
 	
 	public BoundaryBox getBB(int index){
-		return cells.get(index).getBB();
+		return getCell(index).getBB();
 	}
 	
 	public Point getCentroid(int index){
-		return cells.get(index).getCentroid();
+		return getCell(index).getCentroid();
 	}
 	
 	public Set<Point> getPointSet(int index){
-		return cells.get(index).getPointSet();
+		return getCell(index).getPointSet();
 	}
 	
 	public int numCells(){
 		return cells.size();
+	}
+	
+	public void printCells(){
+		for(Cell cell : cells){
+			System.out.println(cell);
+		}
 	}
 	
 	

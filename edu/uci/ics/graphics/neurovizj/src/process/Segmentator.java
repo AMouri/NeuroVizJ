@@ -45,9 +45,6 @@ public class Segmentator {
 	 * @return
 	 */
 	public ImagePlus segment(String path){
-		System.out.println("Begin");
-		long begin = System.nanoTime();
-		
 		InputImage input = new InputImage(path);
 		ImageProcessor origImg = input.getOrig().getProcessor();
 		ImageProcessor adjustedImg = input.getAdjusted().getProcessor();
@@ -97,17 +94,13 @@ public class Segmentator {
 		boundaries = findConnectedComponents(boundaries);
 		
 		double[] hMin = findhMin(maximList, belongs, width, height, boundaries, imc, presmooth1);
-		for(int i = 0; i < hMin.length; i++){
-			System.out.println(hMin[i]);
-		}
 		
 		ImageProcessor threshSmooth = presmooth1.convertToByteProcessor(true);
 		threshSmooth.threshold(0);
 		
 		List<BoundaryBox> bbs = BoundaryBox.getBoundaries(threshSmooth, maximList);
-		System.out.println("Time elapsed: " + (System.nanoTime() - begin)/1000000000.0 + " seconds");
+		
 		ImageProcessor mask = performWatershedding(maximList, bbs, width, height, hMin, origImg);
-		System.out.println("Time elapsed: " + (System.nanoTime() - begin)/1000000000.0 + " seconds");
 		
 		//System.out.println("Time elapsed: " + (System.nanoTime() - begin)/1000000000.0 + " seconds");
 		return new ImagePlus("Segmented image", mask); //TODO: change when completed testing

@@ -1,15 +1,54 @@
 package edu.uci.ics.graphics.neurovizj.src.process;
 
+import java.io.File;
+import java.util.Arrays;
 import java.util.Set;
+
+import matlabcontrol.MatlabProxy;
+import matlabcontrol.extensions.MatlabTypeConverter;
 
 public class Tracker {
 	
-	public void track(String folder){
-		//perform tracking
-		//TODO
+	private MatlabProxy proxy;
+	private MatlabTypeConverter processor;
+	private Segmentator segmentator;
+	
+	public Tracker(MatlabProxy proxy, MatlabTypeConverter processor){
+		this.proxy = proxy;
+		this.processor = processor;
+		this.segmentator = new Segmentator(proxy, processor);
 	}
 	
-	public int[] match(SegmentedImage A, SegmentedImage B){
+	public SegmentedImage[] track(String folderName, String headerName){
+		//perform tracking
+		final File folder = new File(folderName);
+		File[] folderFiles = folder.listFiles();
+		FileWrapper[] files = new FileWrapper[folderFiles.length];
+		SegmentedImage[] segmented = new SegmentedImage[folderFiles.length];
+		System.out.println("Retrieving files");
+		for(int i = 0; i < folderFiles.length; i++){
+			files[i] = new FileWrapper(folderFiles[i], getId(headerName, folderFiles[i].getName()));
+		}
+		Arrays.sort(files);
+		for(int i = 0; i < files.length; i++){
+			System.out.println("Segmenting " + files[i].getName());
+			segmented[i] = new SegmentedImage(folderName + "\\" + files[i].getName(), segmentator);
+		}
+		
+		for(int i = 0; i < files.length - 1; i++){
+			System.out.println("Matching " + files[i].getName() + " and " + files[i+1].getName());
+			match(segmented[i], segmented[i+1]);
+		}
+		
+		return segmented;
+		
+	}
+	
+	public int getId(String header, String name){
+		return Integer.parseInt(name.replace(header + "t", "").replace(".TIF", ""));
+	}
+	
+	public void match(SegmentedImage A, SegmentedImage B){
 //		int numNodes = Math.max(A.numCells(), B.numCells()) + 3;
 		
 		double[][] costs = assignCosts(A, B);
@@ -18,7 +57,9 @@ public class Tracker {
 		
 		int[] assigns = hungarian.execute();
 		
-		return assigns;
+		for(int i = 0; i < assigns.length; i++){
+			A.setSuccessor(i, (assigns[i] == -1) ? null : B.getCell(assigns[i]));
+		}
 		
 	}
 	
@@ -27,13 +68,13 @@ public class Tracker {
 		for(int i = 0; i < A.numCells(); i++){
 			for(int j = 0; j < B.numCells(); j++){
 				double aArea = A.getArea(i);
-				double bArea = B.getArea(i);
+				double bArea = B.getArea(j);
 				double aMean = A.getMean(i);
-				double bMean = B.getMean(i);
+				double bMean = B.getMean(j);
 				Point aCentroid = A.getCentroid(i);
-				Point bCentroid = B.getCentroid(i);
+				Point bCentroid = B.getCentroid(j);
 				Set<Point> intersect = A.getPointSet(i);
-				intersect.retainAll(B.getPointSet(i));
+				intersect.retainAll(B.getPointSet(j));
 				
 				double areaFact = (aArea - bArea)/Math.max(aArea, bArea);
 				double meanFact = (aMean - bMean)/Math.max(aMean, bMean);
@@ -47,4 +88,31 @@ public class Tracker {
 		return costs;
 	}
 	
+}
+
+class FileWrapper implements Comparable<FileWrapper>{
+	
+	private File file;
+	private int id;
+	
+	public FileWrapper(File file, int id){
+		this.file = file;
+		this.id = id;
+	}
+	
+	public int compareTo(FileWrapper o){
+		return id - o.getId();
+	}
+	
+	public int getId(){
+		return id;
+	}
+	
+	public File getFile(){
+		return file;
+	}
+	
+	public String getName(){
+		return file.getName();
+	}
 }
