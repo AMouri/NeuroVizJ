@@ -47,6 +47,7 @@ public class Main {
 				MatlabTypeConverter processor = new MatlabTypeConverter(proxy);
 				Segmentator segmentator = new Segmentator(proxy, processor);
 				SegmentedImage result = new SegmentedImage(iName, segmentator);
+				if(thresholded) result.getImage().threshold(0);
 				IJ.save(new ImagePlus(oName, result.getImage()), oName); //TODO: remove when finished testing
 //				IJ.save(segmentator.segment(iName, null, null), oName); //TODO: remove when finished testing
 				opener.open(oName);

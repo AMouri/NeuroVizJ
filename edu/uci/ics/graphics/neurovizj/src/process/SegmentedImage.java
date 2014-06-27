@@ -16,12 +16,23 @@ public class SegmentedImage {
 	private ImageProcessor orig;
 	private List<Cell> cells;
 	
+	/**
+	 * Constructs with a segmented image, the original image, and the list of cells
+	 * @param ip
+	 * @param orig
+	 * @param cells
+	 */
 	public SegmentedImage(ImageProcessor ip, ImageProcessor orig, List<Cell> cells){
 		this.ip = ip;
 		this.orig = orig;
 		this.cells = cells;
 	}
 	
+	/**
+	 * Processes the image located at path with the given segmentator
+	 * @param image
+	 * @param segmentator
+	 */
 	public SegmentedImage(String image, Segmentator segmentator){
 		this.orig = new ImagePlus(image).getProcessor();
 		ImagePlus segmented = segmentator.segment(image);
@@ -29,50 +40,104 @@ public class SegmentedImage {
 		this.cells = Cell.findCells(new ImagePlus(image), segmented, image);
 	}
 	
+	/**
+	 * Retrieves the segmented image
+	 * @return
+	 */
 	public ImageProcessor getImage(){
 		return ip;
 	}
 	
+	/**
+	 * Retrieves the original image
+	 * @return
+	 */
 	public ImageProcessor getOrig(){
 		return orig;
 	}
 	
+	/**
+	 * Retrieves the list of cells in the image
+	 * @return
+	 */
 	public List<Cell> getCells(){
 		return cells;
 	}
 	
+	/**
+	 * Sets the successor to the ith cell to c
+	 * @param i
+	 * @param c
+	 */
 	public void setSuccessor(int i, Cell c){
 		getCell(i).setNextCell(c);
 	}
 	
+	/**
+	 * Gets the ith cell in the image
+	 * @param i
+	 * @return
+	 */
 	public Cell getCell(int i){
 		return cells.get(i);
 	}
 	
-	public int getArea(int index){
-		return getCell(index).getArea();
+	/**
+	 * Gets the area of the ith cell
+	 * @param index
+	 * @return
+	 */
+	public int getArea(int i){
+		return getCell(i).getArea();
 	}
 	
-	public double getMean(int index){
-		return getCell(index).getMean();
+	/**
+	 * Gets the mean BW intensity of the ith cell
+	 * @param i
+	 * @return
+	 */
+	public double getMean(int i){
+		return getCell(i).getMean();
 	}
 	
-	public BoundaryBox getBB(int index){
-		return getCell(index).getBB();
+	/**
+	 * Gets the boundary box of the ith cell
+	 * @param i
+	 * @return
+	 */
+	public BoundaryBox getBB(int i){
+		return getCell(i).getBB();
 	}
 	
-	public Point getCentroid(int index){
-		return getCell(index).getCentroid();
+	/**
+	 * Gets the centroid of the ith cell
+	 * @param i
+	 * @return
+	 */
+	public Point getCentroid(int i){
+		return getCell(i).getCentroid();
 	}
 	
-	public Set<Point> getPointSet(int index){
-		return getCell(index).getPointSet();
+	/**
+	 * Gets the point set mask of the ith cell
+	 * @param i
+	 * @return
+	 */
+	public Set<Point> getPointSet(int i){
+		return getCell(i).getPointSet();
 	}
 	
+	/**
+	 * Gets the number of cells in the image
+	 * @return
+	 */
 	public int numCells(){
 		return cells.size();
 	}
 	
+	/**
+	 * Prints data for each cell in the image.
+	 */
 	public void printCells(){
 		for(Cell cell : cells){
 			System.out.println(cell);

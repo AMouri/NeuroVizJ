@@ -10,8 +10,21 @@ import edu.uci.ics.graphics.neurovizj.src.process.Cell;
 import edu.uci.ics.graphics.neurovizj.src.process.Point;
 import edu.uci.ics.graphics.neurovizj.src.process.SegmentedImage;
 
+/**
+ * Defines methods to save processed data as images
+ * @author Alec
+ *
+ */
 public class ImageExporter {
 
+	/**
+	 * Saves the tracked images from begin to end as tiff stacks. May or may not be thresholded.
+	 * @param tracked
+	 * @param begin
+	 * @param end
+	 * @param out
+	 * @param thresholded
+	 */
 	public void saveTiff(SegmentedImage[] tracked, int begin, int end, String out, boolean thresholded){
 		int cellNum = 1;
 		for(Cell cell : tracked[0].getCells()){

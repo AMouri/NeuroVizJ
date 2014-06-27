@@ -12,17 +12,29 @@ public class Canny {
 	private double thresholdRatio;
 	private double percentNotEdges;
 	private double sigma;
-	
+
 	private enum Direction{
 		EAST, NORTHEAST, NORTH, NORTHWEST
 	}
 	
+	/**
+	 * Constructs a Canny edge detector with a threshold ratio, a percentage of the image guaranteed to not be edges,
+	 * and the sigma for de-noising
+	 * @param thresh
+	 * @param perc
+	 * @param sigma
+	 */
 	public Canny(double thresh, double perc, double sigma){
 		this.thresholdRatio = thresh;
 		this.percentNotEdges = perc;
 		this.sigma = sigma;
 	}
 	
+	/**
+	 * Peforms Canny edge detection on ip.
+	 * @param ip
+	 * @return
+	 */
 	public ImageProcessor canny(ImageProcessor ip){
 		//Filter out noise
 		ImageProcessor result = ip.duplicate();
@@ -169,6 +181,14 @@ public class Canny {
 		return buckets/64.0;
 	}
 	
+	/**
+	 * Performs hysterisis thresholding on the image.
+	 * @param edges
+	 * @param gradient
+	 * @param low
+	 * @param high
+	 * @return
+	 */
 	private static ImageProcessor doHysterisis(ImageProcessor edges, ImageProcessor gradient, double low, double high){
 		ImageProcessor result = new ByteProcessor(edges.getWidth(), edges.getHeight());
 		ImageProcessor med = result.duplicate();
@@ -195,8 +215,13 @@ public class Canny {
 		
 	}
 	
-	
-	
+	/**
+	 * Modified flood fill to look for medium edges that for some path to strong edges
+	 * @param candidates
+	 * @param strong
+	 * @param med
+	 * @return
+	 */
 	private static ImageProcessor search(List<Integer> candidates, ImageProcessor strong, ImageProcessor med){
 		ImageProcessor result = strong.duplicate();
 		for(Integer pt : candidates){
@@ -213,6 +238,15 @@ public class Canny {
 		return result;
 	}
 	
+	/**
+	 * Recursive helper function for search
+	 * @param x
+	 * @param y
+	 * @param strong
+	 * @param med
+	 * @param visited
+	 * @return
+	 */
 	private static boolean searchHelp(int x, int y, ImageProcessor strong, ImageProcessor med, boolean[][] visited){
 		visited[x][y] = true;
 		for(int i = x - 1; i <= x + 1; i++){

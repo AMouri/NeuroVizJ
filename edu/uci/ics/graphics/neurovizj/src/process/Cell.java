@@ -104,34 +104,66 @@ public class Cell {
 		return cells;
 	}
 	
+	/**
+	 * Gets the cell area
+	 * @return
+	 */
 	public int getArea(){
 		return area;
 	}
 	
+	/**
+	 * Gets the mean BW intensity of the cell
+	 * @return
+	 */
 	public double getMean(){
 		return mean;
 	}
 	
+	/**
+	 * Gets the boundary box of the cell
+	 * @return
+	 */
 	public BoundaryBox getBB(){
 		return bb;
 	}
 	
+	/**
+	 * Gets the cell's centroid
+	 * @return
+	 */
 	public Point getCentroid(){
 		return centroid;
 	}
 	
+	/**
+	 * Gets the point-set hash of the cell
+	 * @return
+	 */
 	public Set<Point> getPointSet(){
 		return new HashSet<Point>(points);
 	}
 	
+	/**
+	 * Gets the cell's successor
+	 * @return
+	 */
 	public Cell getNextCell(){
 		return nextCell;
 	}
 	
+	/**
+	 * Gets the cell's ancestor
+	 * @return
+	 */
 	public Cell getPrevCell(){
 		return prevCell;
 	}
 	
+	/**
+	 * Sets the cell's successor to c
+	 * @param c
+	 */
 	public void setNextCell(Cell c){
 		nextCell = c;
 		if(c != null && c.getPrevCell() != this){
@@ -139,6 +171,10 @@ public class Cell {
 		}
 	}
 	
+	/**
+	 * Sets the cell's ancestor to c
+	 * @param c
+	 */
 	public void setPrevCell(Cell c){
 		prevCell = c;
 		if(c != null && c.getNextCell() != this){

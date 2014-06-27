@@ -131,7 +131,7 @@ public class Segmentator {
 	}
 	
 	/**
-	 * Perform watershedding!
+	 * Perform watershedding at a particular region in the image.
 	 * @param region
 	 * @param minBright
 	 * @param minHeight
@@ -391,6 +391,17 @@ public class Segmentator {
 		return im.getProcessor();
 	}
 	
+	/**
+	 * Finds the minimum heights for each cell to pass to an h-minima transform.
+	 * @param maximList
+	 * @param belongs
+	 * @param width
+	 * @param height
+	 * @param boundaries
+	 * @param imc
+	 * @param ref
+	 * @return
+	 */
 	private double[] findhMin(List<Point> maximList, Hashtable<Point, BoundaryBox> belongs, int width, int height, 
 			ImageProcessor boundaries, ImageProcessor imc, ImageProcessor ref){
 		
@@ -418,6 +429,16 @@ public class Segmentator {
 		return hMin;
 	}
 	
+	/**
+	 * Does watershedding on the entire image
+	 * @param maximList
+	 * @param bbs
+	 * @param width
+	 * @param height
+	 * @param hMin
+	 * @param origImg
+	 * @return
+	 */
 	private ImageProcessor performWatershedding(List<Point> maximList, List<BoundaryBox> bbs, 
 			int width, int height, double[] hMin, ImageProcessor origImg){
 		ImageProcessor tempMask = new ByteProcessor(width, height);

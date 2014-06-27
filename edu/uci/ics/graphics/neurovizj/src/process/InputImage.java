@@ -43,10 +43,18 @@ public class InputImage {
 		adjImg = new ImagePlus("test.png", adjProc);
 	}
 	
+	/**
+	 * Gets the original image
+	 * @return
+	 */
 	public ImagePlus getOrig(){
 		return origImg;
 	}
 	
+	/**
+	 * Gets a contrast adjusted de-noised version of the original image.
+	 * @return
+	 */
 	public ImagePlus getAdjusted(){
 		return adjImg;
 	}
