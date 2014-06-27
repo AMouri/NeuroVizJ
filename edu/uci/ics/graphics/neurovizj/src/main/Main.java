@@ -10,6 +10,7 @@ import edu.uci.ics.graphics.neurovizj.src.process.Tracker;
 import ij.IJ;
 import ij.ImagePlus;
 import ij.io.Opener;
+import io.ImageExporter;
 
 public class Main {
 	
@@ -18,6 +19,7 @@ public class Main {
 	static String folder = "";
 	static boolean segment = false;
 	static boolean track = false;
+	static boolean thresholded = false;
 
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
@@ -32,6 +34,8 @@ public class Main {
 				segment = true;
 			} else if (args[i].equals("-t")){
 				track = true;
+			} else if (args[i].equals("-thresh")){
+				thresholded = true;
 			}
 		}
 		
@@ -60,6 +64,9 @@ public class Main {
 				MatlabTypeConverter processor = new MatlabTypeConverter(proxy);
 				Tracker tracker = new Tracker(proxy, processor);
 				SegmentedImage[] tracked = tracker.track(folder, iName);
+				
+				ImageExporter exporter = new ImageExporter();
+				exporter.saveTiff(tracked, 0, tracked.length, oName, thresholded);
 				proxy.disconnect();
 			} catch(Exception e){
 				e.printStackTrace();

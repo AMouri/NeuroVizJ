@@ -14,7 +14,6 @@ import ij.plugin.filter.ParticleAnalyzer;
 import ij.plugin.filter.RankFilters;
 import ij.process.Blitter;
 import ij.process.ByteProcessor;
-import ij.process.FloatProcessor;
 import ij.process.ImageProcessor;
 import matlabcontrol.*;
 import matlabcontrol.extensions.MatlabNumericArray;

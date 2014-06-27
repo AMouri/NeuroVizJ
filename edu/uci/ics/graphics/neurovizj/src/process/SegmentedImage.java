@@ -1,6 +1,5 @@
 package edu.uci.ics.graphics.neurovizj.src.process;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -14,14 +13,17 @@ import ij.process.ImageProcessor;
  */
 public class SegmentedImage {
 	private ImageProcessor ip;
+	private ImageProcessor orig;
 	private List<Cell> cells;
 	
-	public SegmentedImage(ImageProcessor ip, List<Cell> cells){
+	public SegmentedImage(ImageProcessor ip, ImageProcessor orig, List<Cell> cells){
 		this.ip = ip;
+		this.orig = orig;
 		this.cells = cells;
 	}
 	
 	public SegmentedImage(String image, Segmentator segmentator){
+		this.orig = new ImagePlus(image).getProcessor();
 		ImagePlus segmented = segmentator.segment(image);
 		this.ip = segmented.getProcessor();
 		this.cells = Cell.findCells(new ImagePlus(image), segmented, image);
@@ -29,6 +31,10 @@ public class SegmentedImage {
 	
 	public ImageProcessor getImage(){
 		return ip;
+	}
+	
+	public ImageProcessor getOrig(){
+		return orig;
 	}
 	
 	public List<Cell> getCells(){

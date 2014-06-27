@@ -9,13 +9,9 @@ import matlabcontrol.extensions.MatlabTypeConverter;
 
 public class Tracker {
 	
-	private MatlabProxy proxy;
-	private MatlabTypeConverter processor;
 	private Segmentator segmentator;
 	
 	public Tracker(MatlabProxy proxy, MatlabTypeConverter processor){
-		this.proxy = proxy;
-		this.processor = processor;
 		this.segmentator = new Segmentator(proxy, processor);
 	}
 	
@@ -57,32 +53,37 @@ public class Tracker {
 		
 		int[] assigns = hungarian.execute();
 		
-		for(int i = 0; i < assigns.length; i++){
-			A.setSuccessor(i, (assigns[i] == -1) ? null : B.getCell(assigns[i]));
+		for(int i = 0; i < A.numCells(); i++){
+			A.setSuccessor(i, (assigns[i] == -1 || assigns[i] >= B.numCells()) ? null : B.getCell(assigns[i]));
 		}
 		
 	}
 	
 	public double[][] assignCosts(SegmentedImage A, SegmentedImage B){
-		double[][] costs = new double[A.numCells()][B.numCells()];
-		for(int i = 0; i < A.numCells(); i++){
-			for(int j = 0; j < B.numCells(); j++){
-				double aArea = A.getArea(i);
-				double bArea = B.getArea(j);
-				double aMean = A.getMean(i);
-				double bMean = B.getMean(j);
-				Point aCentroid = A.getCentroid(i);
-				Point bCentroid = B.getCentroid(j);
-				Set<Point> intersect = A.getPointSet(i);
-				intersect.retainAll(B.getPointSet(j));
-				
-				double areaFact = (aArea - bArea)/Math.max(aArea, bArea);
-				double meanFact = (aMean - bMean)/Math.max(aMean, bMean);
-				double xFact = aCentroid.getX() - bCentroid.getX();
-				double yFact = aCentroid.getY() - bCentroid.getY();
-				double intersectFact = 1 - intersect.size() /Math.max(aArea, bArea);
-				costs[i][j] = Math.pow(areaFact, 2) + Math.pow(meanFact, 2) + 
-						Math.pow(xFact, 2) + Math.pow(yFact,  2) + Math.pow(intersectFact, 2);
+		double[][] costs = new double[A.numCells()+3][B.numCells()+3];
+		double minWeight = 5*100*100;
+		for(int i = 0; i < A.numCells() + 3; i++){
+			for(int j = 0; j < B.numCells() + 3; j++){
+				if (i >= A.numCells() || j >= B.numCells()){
+					costs[i][j] = minWeight;
+				} else {
+					double aArea = A.getArea(i);
+					double bArea = B.getArea(j);
+					double aMean = A.getMean(i);
+					double bMean = B.getMean(j);
+					Point aCentroid = A.getCentroid(i);
+					Point bCentroid = B.getCentroid(j);
+					Set<Point> intersect = A.getPointSet(i);
+					intersect.retainAll(B.getPointSet(j));
+					
+					double areaFact = (aArea - bArea)/Math.max(aArea, bArea);
+					double meanFact = (aMean - bMean)/Math.max(aMean, bMean);
+					double xFact = aCentroid.getX() - bCentroid.getX();
+					double yFact = aCentroid.getY() - bCentroid.getY();
+					double intersectFact = 1 - intersect.size() /Math.max(aArea, bArea);
+					costs[i][j] = Math.pow(areaFact, 2) + Math.pow(meanFact, 2) + 
+							Math.pow(xFact, 2) + Math.pow(yFact, 2) + Math.pow(intersectFact, 2);
+				}
 			}
 		}
 		return costs;

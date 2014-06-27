@@ -12,8 +12,6 @@ import ij.gui.Wand;
 import ij.measure.Measurements;
 import ij.measure.ResultsTable;
 import ij.plugin.filter.Analyzer;
-import ij.plugin.filter.ParticleAnalyzer;
-import ij.process.Blitter;
 import ij.process.ImageProcessor;
 
 /**
@@ -64,6 +62,7 @@ public class Cell {
 				if(segmented.get(i,j) == id){
 					this.points.add(new Point(i,j));
 				}
+//				this.points.add(new Point(i,j));
 			}
 		}
 	}
@@ -87,7 +86,7 @@ public class Cell {
 				int id = threshSeg.get(i,j);
 				if(!ids.contains(id)){
 					ids.add(id);
-					wand.autoOutline(i, j);
+					wand.autoOutline(i, j, 0.0, Wand.EIGHT_CONNECTED);
 					Roi roi = new PolygonRoi(wand.xpoints, wand.ypoints, wand.npoints, Roi.POLYGON);
 					orig.setRoi(roi);
 					ResultsTable rt = new ResultsTable();

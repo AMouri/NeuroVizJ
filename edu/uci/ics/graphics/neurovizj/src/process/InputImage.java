@@ -1,7 +1,6 @@
 package edu.uci.ics.graphics.neurovizj.src.process;
 
 import ij.ImagePlus;
-import ij.io.Opener;
 import ij.plugin.ContrastEnhancer;
 import ij.plugin.filter.RankFilters;
 import ij.process.ImageProcessor;
@@ -23,7 +22,6 @@ public class InputImage {
 	 * @param path
 	 */
 	public InputImage(String path){
-		Opener opener = new Opener();
 		origImg = new ImagePlus(path);
 		//adjImg = new ImagePlus(path);
 		
