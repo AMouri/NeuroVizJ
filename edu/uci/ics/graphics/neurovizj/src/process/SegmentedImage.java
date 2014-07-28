@@ -14,7 +14,7 @@ import ij.process.ImageProcessor;
 public class SegmentedImage {
 	private ImageProcessor ip;
 	private ImageProcessor orig;
-	private List<Cell> cells;
+	private List<ProcessedCell> cells;
 	
 	/**
 	 * Constructs with a segmented image, the original image, and the list of cells
@@ -22,7 +22,7 @@ public class SegmentedImage {
 	 * @param orig
 	 * @param cells
 	 */
-	public SegmentedImage(ImageProcessor ip, ImageProcessor orig, List<Cell> cells){
+	public SegmentedImage(ImageProcessor ip, ImageProcessor orig, List<ProcessedCell> cells){
 		this.ip = ip;
 		this.orig = orig;
 		this.cells = cells;
@@ -37,7 +37,7 @@ public class SegmentedImage {
 		this.orig = new ImagePlus(image).getProcessor();
 		ImagePlus segmented = segmentator.segment(image);
 		this.ip = segmented.getProcessor();
-		this.cells = Cell.findCells(new ImagePlus(image), segmented, image);
+		this.cells = ProcessedCell.findCells(new ImagePlus(image), segmented, image);
 	}
 	
 	/**
@@ -60,7 +60,7 @@ public class SegmentedImage {
 	 * Retrieves the list of cells in the image
 	 * @return
 	 */
-	public List<Cell> getCells(){
+	public List<ProcessedCell> getCells(){
 		return cells;
 	}
 	
@@ -69,7 +69,7 @@ public class SegmentedImage {
 	 * @param i
 	 * @param c
 	 */
-	public void setSuccessor(int i, Cell c){
+	public void setSuccessor(int i, ProcessedCell c){
 		getCell(i).setNextCell(c);
 	}
 	
@@ -78,7 +78,7 @@ public class SegmentedImage {
 	 * @param i
 	 * @return
 	 */
-	public Cell getCell(int i){
+	public ProcessedCell getCell(int i){
 		return cells.get(i);
 	}
 	
@@ -139,7 +139,7 @@ public class SegmentedImage {
 	 * Prints data for each cell in the image.
 	 */
 	public void printCells(){
-		for(Cell cell : cells){
+		for(ProcessedCell cell : cells){
 			System.out.println(cell);
 		}
 	}

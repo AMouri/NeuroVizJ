@@ -3,14 +3,11 @@ package edu.uci.ics.graphics.neurovizj.src.main;
 import matlabcontrol.MatlabProxy;
 import matlabcontrol.MatlabProxyFactory;
 import matlabcontrol.extensions.MatlabTypeConverter;
-import edu.uci.ics.graphics.neurovizj.src.process.Cell;
+import edu.uci.ics.graphics.neurovizj.src.io.ExcelExporter;
+import edu.uci.ics.graphics.neurovizj.src.io.ImageExporter;
 import edu.uci.ics.graphics.neurovizj.src.process.Segmentator;
 import edu.uci.ics.graphics.neurovizj.src.process.SegmentedImage;
 import edu.uci.ics.graphics.neurovizj.src.process.Tracker;
-import ij.IJ;
-import ij.ImagePlus;
-import ij.io.Opener;
-import io.ImageExporter;
 
 public class Main {
 	
@@ -40,21 +37,15 @@ public class Main {
 		}
 		
 		if(segment){
-			Opener opener = new Opener();
 			try{
 				MatlabProxyFactory factory = new MatlabProxyFactory();
 				MatlabProxy proxy = factory.getProxy();
 				MatlabTypeConverter processor = new MatlabTypeConverter(proxy);
 				Segmentator segmentator = new Segmentator(proxy, processor);
 				SegmentedImage result = new SegmentedImage(iName, segmentator);
-				if(thresholded) result.getImage().threshold(0);
-				IJ.save(new ImagePlus(oName, result.getImage()), oName); //TODO: remove when finished testing
-//				IJ.save(segmentator.segment(iName, null, null), oName); //TODO: remove when finished testing
-				opener.open(oName);
+				ExcelExporter ee = new ExcelExporter();
+				ee.exportImageAsSpreadSheet(result, oName);
 				proxy.disconnect();
-				for(Cell cell : result.getCells()){
-					System.out.println(cell);
-				}
 			} catch(Exception e){
 				e.printStackTrace();
 			}
@@ -65,9 +56,10 @@ public class Main {
 				MatlabTypeConverter processor = new MatlabTypeConverter(proxy);
 				Tracker tracker = new Tracker(proxy, processor);
 				SegmentedImage[] tracked = tracker.track(folder, iName);
-				
 				ImageExporter exporter = new ImageExporter();
 				exporter.saveTiff(tracked, 0, tracked.length, oName, thresholded);
+				ExcelExporter ee = new ExcelExporter();
+				ee.exportSequenceAsSpreadSheet(tracked, oName);
 				proxy.disconnect();
 			} catch(Exception e){
 				e.printStackTrace();

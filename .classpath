@@ -4,5 +4,6 @@
 	<classpathentry kind="lib" path="ImageJ/ij.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="matlabcontrol-4.1.0.jar"/>
+	<classpathentry kind="lib" path="poi-3.10-FINAL/poi-3.10-FINAL-20140208.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

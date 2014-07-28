@@ -19,16 +19,16 @@ import ij.process.ImageProcessor;
  * @author Alec
  *
  */
-public class Cell {
+public class ProcessedCell {
 	
 	private String imgName;
 	private ImageProcessor origImg;
-	private ImageProcessor segImg;
 	private int id;
 	private BoundaryBox bb;
 	
-	private Cell nextCell;
-	private Cell prevCell;
+	private ProcessedCell nextCell;
+	private ProcessedCell prevCell;
+	private static String[] attributes = {"Image", "Id", "Area", "Mean", "Centroid", "Prev", "Next"};
 	
 	private int area;
 	private double mean;
@@ -45,16 +45,18 @@ public class Cell {
 	 * @param mean
 	 * @param centroid
 	 */
-	public Cell(String name, ImageProcessor origImg, ImageProcessor segmented, int num, 
+	public ProcessedCell(String name, ImageProcessor origImg, ImageProcessor segmented, int num, 
 			BoundaryBox bb, int area, double mean, Point centroid){
 		imgName = name;
-		this.origImg = origImg;
-		this.segImg = segmented;
 		this.id = num;
 		this.bb = bb;
 		this.area = area;
 		this.mean = mean;
 		this.centroid = centroid;
+		
+		origImg.setRoi(this.bb.getX(), this.bb.getY(), this.bb.getWidth(), this.bb.getHeight());
+		this.origImg = origImg.crop();
+		origImg.resetRoi();
 		
 		this.points = new HashSet<Point>();
 		for(int i = bb.getX(); i < bb.getX() + bb.getWidth(); i++){
@@ -72,13 +74,13 @@ public class Cell {
 	 * @param ip
 	 * @return
 	 */
-	public static List<Cell> findCells(ImagePlus orig, ImagePlus segmented, String imgName){
+	public static List<ProcessedCell> findCells(ImagePlus orig, ImagePlus segmented, String imgName){
 		ImageProcessor masked = orig.getProcessor();
 		ImageProcessor threshSeg = segmented.getProcessor();
 		int width = segmented.getWidth();
 		int height = segmented.getHeight();
 		Wand wand = new Wand(threshSeg);
-		List<Cell> cells = new LinkedList<Cell>();
+		List<ProcessedCell> cells = new LinkedList<ProcessedCell>();
 		HashSet<Integer> ids = new HashSet<Integer>();
 		ids.add(0);
 		for(int i = 0; i < width; i++){
@@ -93,7 +95,7 @@ public class Cell {
 					Analyzer analyzer = new Analyzer(orig, 
 							Measurements.AREA | Measurements.RECT | Measurements.CENTER_OF_MASS | Measurements.MEAN, rt);
 					analyzer.measure();
-					cells.add(new Cell(imgName, masked, threshSeg, id, 
+					cells.add(new ProcessedCell(imgName, masked, threshSeg, id, 
 							new BoundaryBox(rt, 0), (int) rt.getValue("Area", 0), rt.getValue("Mean", 0), 
 							new Point((int) rt.getValue("XM", 0), (int) rt.getValue("YM", 0))));
 					orig.restoreRoi();
@@ -110,6 +112,10 @@ public class Cell {
 	 */
 	public int getArea(){
 		return area;
+	}
+	
+	public int getId(){
+		return id;
 	}
 	
 	/**
@@ -148,7 +154,7 @@ public class Cell {
 	 * Gets the cell's successor
 	 * @return
 	 */
-	public Cell getNextCell(){
+	public ProcessedCell getNextCell(){
 		return nextCell;
 	}
 	
@@ -156,7 +162,7 @@ public class Cell {
 	 * Gets the cell's ancestor
 	 * @return
 	 */
-	public Cell getPrevCell(){
+	public ProcessedCell getPrevCell(){
 		return prevCell;
 	}
 	
@@ -164,7 +170,7 @@ public class Cell {
 	 * Sets the cell's successor to c
 	 * @param c
 	 */
-	public void setNextCell(Cell c){
+	public void setNextCell(ProcessedCell c){
 		nextCell = c;
 		if(c != null && c.getPrevCell() != this){
 			c.setPrevCell(this);
@@ -175,13 +181,37 @@ public class Cell {
 	 * Sets the cell's ancestor to c
 	 * @param c
 	 */
-	public void setPrevCell(Cell c){
+	public void setPrevCell(ProcessedCell c){
 		prevCell = c;
 		if(c != null && c.getNextCell() != this){
 			c.setNextCell(this);
 		}
 	}
 	
+	public static String[] getTags(){
+		return attributes;
+	}
+	
+	public String getAttribute(String attr){
+		switch(attr){
+			case "Image":
+				return imgName;
+			case "Id":
+				return Integer.toString(id);
+			case "Area":
+				return Integer.toString(area);
+			case "Mean":
+				return Double.toString(mean);
+			case "Centroid":
+				return centroid.toString();
+			case "Prev":
+				return (prevCell != null) ? Integer.toString(prevCell.getId()) : "None";
+			case "Next":
+				return (nextCell != null) ? Integer.toString(nextCell.getId()) : "None";
+			default:
+				return "";
+		}
+	}
 	
 	public String toString(){
 		return "Cell #" + id + " in image " + imgName + " at " + centroid + "becomes Cell #" + 

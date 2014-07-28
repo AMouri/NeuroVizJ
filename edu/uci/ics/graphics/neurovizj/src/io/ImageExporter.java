@@ -1,4 +1,4 @@
-package io;
+package edu.uci.ics.graphics.neurovizj.src.io;
 
 import java.awt.Color;
 
@@ -6,7 +6,7 @@ import ij.ImagePlus;
 import ij.ImageStack;
 import ij.io.FileSaver;
 import ij.process.ColorProcessor;
-import edu.uci.ics.graphics.neurovizj.src.process.Cell;
+import edu.uci.ics.graphics.neurovizj.src.process.ProcessedCell;
 import edu.uci.ics.graphics.neurovizj.src.process.Point;
 import edu.uci.ics.graphics.neurovizj.src.process.SegmentedImage;
 
@@ -27,7 +27,7 @@ public class ImageExporter {
 	 */
 	public void saveTiff(SegmentedImage[] tracked, int begin, int end, String out, boolean thresholded){
 		int cellNum = 1;
-		for(Cell cell : tracked[0].getCells()){
+		for(ProcessedCell cell : tracked[0].getCells()){
 			System.out.println("Saving Cell #" + cellNum);
 			ImageStack is = new ImageStack(tracked[0].getImage().getWidth(), tracked[0].getImage().getHeight());
 			ColorProcessor[] images = new ColorProcessor[end-begin];
@@ -41,7 +41,7 @@ public class ImageExporter {
 			}
 			
 			//draw cell backs first
-			Cell c = cell;
+			ProcessedCell c = cell;
 			for(int i = 0; i < end - begin && c != null; i++, c = c.getNextCell()){
 				images[i].setColor(Color.RED);
 				for(Point p : c.getPointSet()){
