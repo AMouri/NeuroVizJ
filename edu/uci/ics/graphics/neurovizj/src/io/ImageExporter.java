@@ -25,23 +25,19 @@ public class ImageExporter {
 	 * @param out
 	 * @param thresholded
 	 */
-	public void saveTiff(SegmentedImage[] tracked, int begin, int end, String out, boolean thresholded){
+	public static void saveTiff(SegmentedImage[] tracked, int begin, int end, String out, boolean thresholded){
 		int cellNum = 1;
 		for(ProcessedCell cell : tracked[0].getCells()){
 			System.out.println("Saving Cell #" + cellNum);
 			ImageStack is = new ImageStack(tracked[0].getImage().getWidth(), tracked[0].getImage().getHeight());
 			ColorProcessor[] images = new ColorProcessor[end-begin];
-			for(int i = 0; i < end - begin; i++){
-				if(thresholded){
-					tracked[begin+i].getImage().threshold(0);
-					images[i] = tracked[begin+i].getImage().convertToColorProcessor();
-				} else {
-					images[i] = tracked[begin+i].getOrig().convertToColorProcessor();
-				}
+			ProcessedCell c = cell;
+			for(int i = 0; c != null && i < end - begin; i++, c= c.getNextCell()){
+				images[i] = c.getImg().convertToColorProcessor();
 			}
 			
 			//draw cell backs first
-			ProcessedCell c = cell;
+			c = cell;
 			for(int i = 0; i < end - begin && c != null; i++, c = c.getNextCell()){
 				images[i].setColor(Color.RED);
 				for(Point p : c.getPointSet()){
@@ -49,9 +45,10 @@ public class ImageExporter {
 				}
 			}
 			
+			//draw centroids
 			c = cell;
 			for(int i = 0; i < end - begin - 1 && c.getNextCell() != null; i++, c = c.getNextCell()){
-				for(int j = 0; j < end - begin; j++){
+				for(int j = 0; images[j] != null && j < end - begin; j++){
 					images[j].setColor(Color.GREEN);
 					images[j].setLineWidth(4);
 					Point cent1 = c.getCentroid();
@@ -61,6 +58,8 @@ public class ImageExporter {
 					images[j].drawLine(cent1.getX(), cent1.getY(), cent2.getX(), cent2.getY());
 				}
 			}
+			
+			//
 			c = cell;
 			for(int j = 0; j < end - begin && c != null; j++, c = c.getNextCell()){
 				images[j].setColor(Color.GREEN);
@@ -76,6 +75,16 @@ public class ImageExporter {
 			String name = out + " - Cell #" + cellNum++ + ".TIF";
 			FileSaver fs = new FileSaver(new ImagePlus(name, is));
 			fs.saveAsTiffStack(name);
+		}
+	}
+	
+	public static void saveTiff(SegmentedImage image, String out){
+		int cellNum = 1;
+		for(ProcessedCell cell : image.getCells()){
+			String name = out + " - Cell #" + cellNum++ + ".TIF";
+			cell.setImgName(name);
+			FileSaver fs = new FileSaver(new ImagePlus(name, cell.getImg()));
+			fs.saveAsTiff(name);
 		}
 	}
 }

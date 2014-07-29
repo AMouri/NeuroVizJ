@@ -13,13 +13,13 @@ import edu.uci.ics.graphics.neurovizj.src.process.SegmentedImage;
 
 public class ExcelExporter {
 
-	public void exportImageAsSpreadSheet(SegmentedImage image, String oName){
+	public static void exportImageAsSpreadSheet(SegmentedImage image, String oName){
 		Workbook wb = new HSSFWorkbook();
 		
 		dumpImageToSheet(image, wb);
 		
 		try{
-			FileOutputStream out = new FileOutputStream(oName);
+			FileOutputStream out = new FileOutputStream(oName + ".xls");
 			wb.write(out);
 			out.close();
 		} catch (Exception e){
@@ -27,7 +27,7 @@ public class ExcelExporter {
 		}
 	}
 	
-	public void exportSequenceAsSpreadSheet(SegmentedImage[] images, String oName){
+	public static void exportSequenceAsSpreadSheet(SegmentedImage[] images, String oName){
 		Workbook wb = new HSSFWorkbook();
 		
 		for(SegmentedImage image : images){
@@ -35,7 +35,7 @@ public class ExcelExporter {
 		}
 		
 		try{
-			FileOutputStream out = new FileOutputStream(oName);
+			FileOutputStream out = new FileOutputStream(oName + ".xls");
 			wb.write(out);
 			out.close();
 		} catch (Exception e){
@@ -44,7 +44,7 @@ public class ExcelExporter {
 		
 	}
 	
-	public void dumpImageToSheet(SegmentedImage image, Workbook wb){
+	public static void dumpImageToSheet(SegmentedImage image, Workbook wb){
 		Sheet s = wb.createSheet();
 		
 		generateHeader(s);
@@ -54,7 +54,7 @@ public class ExcelExporter {
 		}
 	}
 	
-	public void generateHeader(Sheet s){
+	public static void generateHeader(Sheet s){
 		Row r = s.createRow(0);
 		String[] headers = ProcessedCell.getTags();
 		Cell c = null;
@@ -64,7 +64,7 @@ public class ExcelExporter {
 		}
 	}
 	
-	public void fillData(Sheet s, int rownum, ProcessedCell cell){
+	public static void fillData(Sheet s, int rownum, ProcessedCell cell){
 		//Assume that a header was already generated
 		Row r = s.createRow(rownum);
 		String[] headers = ProcessedCell.getTags();

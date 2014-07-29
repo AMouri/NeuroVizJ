@@ -3,6 +3,7 @@ package edu.uci.ics.graphics.neurovizj.src.main;
 import matlabcontrol.MatlabProxy;
 import matlabcontrol.MatlabProxyFactory;
 import matlabcontrol.extensions.MatlabTypeConverter;
+import edu.uci.ics.graphics.neurovizj.src.io.BatchExporter;
 import edu.uci.ics.graphics.neurovizj.src.io.ExcelExporter;
 import edu.uci.ics.graphics.neurovizj.src.io.ImageExporter;
 import edu.uci.ics.graphics.neurovizj.src.process.Segmentator;
@@ -19,7 +20,6 @@ public class Main {
 	static boolean thresholded = false;
 
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
 		for(int i = 0; i < args.length; i++){
 			if(args[i].equals("-i")){
 				iName = args[++i];
@@ -43,23 +43,20 @@ public class Main {
 				MatlabTypeConverter processor = new MatlabTypeConverter(proxy);
 				Segmentator segmentator = new Segmentator(proxy, processor);
 				SegmentedImage result = new SegmentedImage(iName, segmentator);
-				ExcelExporter ee = new ExcelExporter();
-				ee.exportImageAsSpreadSheet(result, oName);
+				ExcelExporter.exportImageAsSpreadSheet(result, oName);
 				proxy.disconnect();
 			} catch(Exception e){
 				e.printStackTrace();
 			}
 		} else if (track){
+			
 			try{
 				MatlabProxyFactory factory = new MatlabProxyFactory();
 				MatlabProxy proxy = factory.getProxy();
 				MatlabTypeConverter processor = new MatlabTypeConverter(proxy);
 				Tracker tracker = new Tracker(proxy, processor);
 				SegmentedImage[] tracked = tracker.track(folder, iName);
-				ImageExporter exporter = new ImageExporter();
-				exporter.saveTiff(tracked, 0, tracked.length, oName, thresholded);
-				ExcelExporter ee = new ExcelExporter();
-				ee.exportSequenceAsSpreadSheet(tracked, oName);
+				BatchExporter.exportBatch(tracked, oName);
 				proxy.disconnect();
 			} catch(Exception e){
 				e.printStackTrace();

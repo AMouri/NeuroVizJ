@@ -107,6 +107,14 @@ public class ProcessedCell {
 	}
 	
 	/**
+	 * Gets the cell image
+	 * @return
+	 */
+	public ImageProcessor getImg(){
+		return origImg;
+	}
+	
+	/**
 	 * Gets the cell area
 	 * @return
 	 */
@@ -211,6 +219,10 @@ public class ProcessedCell {
 			default:
 				return "";
 		}
+	}
+	
+	public void setImgName(String name){
+		imgName = name;
 	}
 	
 	public String toString(){
