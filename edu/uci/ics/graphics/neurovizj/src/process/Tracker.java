@@ -1,7 +1,10 @@
 package edu.uci.ics.graphics.neurovizj.src.process;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Hashtable;
+import java.util.List;
 import java.util.Set;
 
 import matlabcontrol.MatlabProxy;
@@ -57,6 +60,46 @@ public class Tracker {
 			A.setSuccessor(i, (assigns[i] == -1 || assigns[i] >= B.numCells()) ? null : B.getCell(assigns[i]));
 		}
 		
+	}
+	
+	public List<MergeCell> detectPotentialMerge(double[][] costs, SegmentedImage A, SegmentedImage B, double ep){
+		List<MergeCell> result = new ArrayList<MergeCell>();
+		for(int j = 0; j < costs[0].length; j++){
+			List<ProcessedCell> temp = new ArrayList<ProcessedCell>();
+			double min_weight = Double.MAX_VALUE;
+			for(int i = 0; i < costs.length; i++){
+				min_weight = Math.min(min_weight, costs[i][j]);
+			}
+			for(int i = 0; i < costs.length; i++){
+				if(min_weight/costs[i][j] >= ep){
+					temp.add(A.getCell(i));
+				}
+			}
+			if(temp.size() > 1){
+				result.add(new MergeCell(temp, B.getCell(j)));
+			}
+		}
+		return result;
+	}
+	
+	public List<SplitCell> detectPotentialSplit(double[][] costs, SegmentedImage A, SegmentedImage B, double ep){
+		List<SplitCell> result = new ArrayList<SplitCell>();
+		for(int i = 0; i < costs.length; i++){
+			List<ProcessedCell> temp = new ArrayList<ProcessedCell>();
+			double min_weight = Double.MAX_VALUE;
+			for(int j = 0; i < costs[0].length; j++){
+				min_weight = Math.min(min_weight, costs[i][j]);
+			}
+			for(int j = 0; i < costs[0].length; j++){
+				if(min_weight/costs[i][j] >= ep){
+					temp.add(B.getCell(j));
+				}
+			}
+			if(temp.size() > 1){
+				result.add(new SplitCell(A.getCell(i), temp));
+			}
+		}
+		return result;
 	}
 	
 	public double[][] assignCosts(SegmentedImage A, SegmentedImage B){
@@ -115,5 +158,30 @@ class FileWrapper implements Comparable<FileWrapper>{
 	
 	public String getName(){
 		return file.getName();
+	}
+}
+
+
+/* There exists too different types of ambiguity between images i and i+1:
+ * 1. multiple cells in image i have close weights to 1 cell in image i+1
+ * 2. 1 cell in image i have close weights to multiple cells in image i+1
+ */
+class MergeCell {
+	public List<ProcessedCell> src;
+	public ProcessedCell dst;
+	
+	public MergeCell(List<ProcessedCell> src, ProcessedCell dst){
+		this.src = src;
+		this.dst = dst;
+	}
+}
+
+class SplitCell {
+	public ProcessedCell src;
+	public List<ProcessedCell> dst;
+	
+	public SplitCell(ProcessedCell src, List<ProcessedCell> dst){
+		this.src = src;
+		this.dst = dst;
 	}
 }
