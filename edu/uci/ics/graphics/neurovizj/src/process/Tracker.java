@@ -43,11 +43,11 @@ public class Tracker {
 		
 	}
 	
-	public int getId(String header, String name){
+	private int getId(String header, String name){
 		return Integer.parseInt(name.replace(header + "t", "").replace(".TIF", ""));
 	}
 	
-	public void match(SegmentedImage A, SegmentedImage B){
+	private void match(SegmentedImage A, SegmentedImage B){
 //		int numNodes = Math.max(A.numCells(), B.numCells()) + 3;
 		
 		double[][] costs = assignCosts(A, B);
@@ -62,7 +62,11 @@ public class Tracker {
 		
 	}
 	
-	public List<MergeCell> detectPotentialMerge(double[][] costs, SegmentedImage A, SegmentedImage B, double ep){
+	private void handlePotentialConflicts(){
+		//TODO
+	}
+	
+	private List<MergeCell> detectPotentialMerge(double[][] costs, SegmentedImage A, SegmentedImage B, double ep){
 		List<MergeCell> result = new ArrayList<MergeCell>();
 		for(int j = 0; j < costs[0].length; j++){
 			List<ProcessedCell> temp = new ArrayList<ProcessedCell>();
@@ -82,7 +86,7 @@ public class Tracker {
 		return result;
 	}
 	
-	public List<SplitCell> detectPotentialSplit(double[][] costs, SegmentedImage A, SegmentedImage B, double ep){
+	private List<SplitCell> detectPotentialSplit(double[][] costs, SegmentedImage A, SegmentedImage B, double ep){
 		List<SplitCell> result = new ArrayList<SplitCell>();
 		for(int i = 0; i < costs.length; i++){
 			List<ProcessedCell> temp = new ArrayList<ProcessedCell>();
@@ -102,7 +106,7 @@ public class Tracker {
 		return result;
 	}
 	
-	public double[][] assignCosts(SegmentedImage A, SegmentedImage B){
+	private double[][] assignCosts(SegmentedImage A, SegmentedImage B){
 		double[][] costs = new double[A.numCells()+3][B.numCells()+3];
 		double minWeight = 5*100*100;
 		for(int i = 0; i < A.numCells() + 3; i++){
