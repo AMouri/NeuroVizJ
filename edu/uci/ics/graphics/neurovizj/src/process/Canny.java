@@ -7,6 +7,11 @@ import ij.process.ImageProcessor;
 import java.util.LinkedList;
 import java.util.List;
 
+/**
+ * Class that performs Canny edge detection
+ * @author Alec
+ *
+ */
 public class Canny {
 	
 	private double thresholdRatio;

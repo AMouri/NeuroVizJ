@@ -11,8 +11,18 @@ import org.apache.poi.ss.usermodel.Workbook;
 import edu.uci.ics.graphics.neurovizj.src.process.ProcessedCell;
 import edu.uci.ics.graphics.neurovizj.src.process.SegmentedImage;
 
+/**
+ * Performs exportation into .xls spreadsheets
+ * @author Alec
+ *
+ */
 public class ExcelExporter {
 
+	/**
+	 * Exports the spreadsheet for a segmented image with the given output name
+	 * @param image
+	 * @param oName
+	 */
 	public static void exportImageAsSpreadSheet(SegmentedImage image, String oName){
 		Workbook wb = new HSSFWorkbook();
 		
@@ -27,6 +37,11 @@ public class ExcelExporter {
 		}
 	}
 	
+	/**
+	 * Exports the spreadsheet for a sequence of images with a given output name
+	 * @param images
+	 * @param oName
+	 */
 	public static void exportSequenceAsSpreadSheet(SegmentedImage[] images, String oName){
 		Workbook wb = new HSSFWorkbook();
 		
@@ -44,7 +59,12 @@ public class ExcelExporter {
 		
 	}
 	
-	public static void dumpImageToSheet(SegmentedImage image, Workbook wb){
+	/**
+	 * Dumps image data into an Apache POI workbook
+	 * @param image
+	 * @param wb
+	 */
+	private static void dumpImageToSheet(SegmentedImage image, Workbook wb){
 		Sheet s = wb.createSheet();
 		
 		generateHeader(s);
@@ -54,7 +74,11 @@ public class ExcelExporter {
 		}
 	}
 	
-	public static void generateHeader(Sheet s){
+	/**
+	 * Generates a labels for a sheet that will hold data for each cell in an image
+	 * @param s
+	 */
+	private static void generateHeader(Sheet s){
 		Row r = s.createRow(0);
 		String[] headers = ProcessedCell.getTags();
 		Cell c = null;
@@ -64,7 +88,13 @@ public class ExcelExporter {
 		}
 	}
 	
-	public static void fillData(Sheet s, int rownum, ProcessedCell cell){
+	/**
+	 * Populates a sheet's row with a cell's data
+	 * @param s
+	 * @param rownum
+	 * @param cell
+	 */
+	private static void fillData(Sheet s, int rownum, ProcessedCell cell){
 		//Assume that a header was already generated
 		Row r = s.createRow(rownum);
 		String[] headers = ProcessedCell.getTags();

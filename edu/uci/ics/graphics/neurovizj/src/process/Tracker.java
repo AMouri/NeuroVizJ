@@ -10,14 +10,34 @@ import java.util.Set;
 import matlabcontrol.MatlabProxy;
 import matlabcontrol.extensions.MatlabTypeConverter;
 
+/**
+ * Implementation of a tracker geared towards the tracking of neurological stem cells
+ * @author Alec
+ *
+ */
 public class Tracker {
 	
 	private Segmentator segmentator;
 	
+	/**
+	 * Contrusts a tracker instance with matlab links
+	 * @param proxy
+	 * @param processor
+	 */
 	public Tracker(MatlabProxy proxy, MatlabTypeConverter processor){
 		this.segmentator = new Segmentator(proxy, processor);
 	}
 	
+	/**
+	 * Tracks a sequence of images in a folder. Each image will be found by a header name,
+	 * and appending "t", followed by a number, denoting the position of the image in the
+	 * sequence.
+	 * 
+	 * First performs segmentation, then performs several tracking procedures.
+	 * @param folderName
+	 * @param headerName
+	 * @return
+	 */
 	public SegmentedImage[] track(String folderName, String headerName){
 		//perform tracking
 		final File folder = new File(folderName);
@@ -43,10 +63,22 @@ public class Tracker {
 		
 	}
 	
+	/**
+	 * Gets the sequence number of the image
+	 * @param header
+	 * @param name
+	 * @return
+	 */
 	private int getId(String header, String name){
 		return Integer.parseInt(name.replace(header + "t", "").replace(".TIF", ""));
 	}
 	
+	/**
+	 * Matches cells from image A to image B using the Hungarian algorithm
+	 * If ambiguity is detected, handles them (WIP)
+	 * @param A
+	 * @param B
+	 */
 	private void match(SegmentedImage A, SegmentedImage B){
 //		int numNodes = Math.max(A.numCells(), B.numCells()) + 3;
 		
@@ -62,20 +94,49 @@ public class Tracker {
 		
 	}
 	
-	private void handlePotentialConflicts(){
-		//TODO
+	/**
+	 * Will handle potential conflicts, both by using other image sets in the data and by prompting
+	 * a user to distinguish between cells
+	 * @param costs
+	 * @param assigns
+	 * @param A
+	 * @param B
+	 */
+	private void handlePotentialConflicts(double[][] costs, int[] assigns, SegmentedImage A, SegmentedImage B){
+		
+		//TODO: test some constants
+		List<MergeCell> merges = detectPotentialMerge(costs, assigns, A, B, .9);
+		List<SplitCell> splits = detectPotentialSplit(costs, assigns, A, B, .9);
+		//TODO: finish method
 	}
 	
-	private List<MergeCell> detectPotentialMerge(double[][] costs, SegmentedImage A, SegmentedImage B, double ep){
+	/**
+	 * Detects potential conflicts where multiple cells in frame i match to a cell in frame i+1.
+	 * Proposed method is, after running the Hungarian algorithm on A and B, find all ratios of the
+	 * assignment found and possible assignments, and return conflicts if the ratio is close to 1.
+	 * @param costs
+	 * @param assigns
+	 * @param A
+	 * @param B
+	 * @param ep
+	 * @return
+	 */
+	private List<MergeCell> detectPotentialMerge(double[][] costs, int[] assigns, SegmentedImage A, SegmentedImage B, double ep){
 		List<MergeCell> result = new ArrayList<MergeCell>();
 		for(int j = 0; j < costs[0].length; j++){
 			List<ProcessedCell> temp = new ArrayList<ProcessedCell>();
-			double min_weight = Double.MAX_VALUE;
-			for(int i = 0; i < costs.length; i++){
-				min_weight = Math.min(min_weight, costs[i][j]);
+			int index = -1;
+			for(int k = 0; k < costs.length; k++){
+				if(assigns[k] == j){
+					index = j;
+					break;
+				}
 			}
+			if(index == -1) continue;
+			double weight = costs[index][j];
+			
 			for(int i = 0; i < costs.length; i++){
-				if(min_weight/costs[i][j] >= ep){
+				if(weight/costs[i][j] >= ep){
 					temp.add(A.getCell(i));
 				}
 			}
@@ -86,16 +147,25 @@ public class Tracker {
 		return result;
 	}
 	
-	private List<SplitCell> detectPotentialSplit(double[][] costs, SegmentedImage A, SegmentedImage B, double ep){
+	/**
+	 * Detects potential conflicts where a cell in frame i matches to multiple cells in frame i+1.
+	 * Proposed method is, after running the Hungarian algorithm on A and B, find all ratios of the
+	 * assignment found and possible assignments, and return conflicts if the ratio is close to 1.
+	 * @param costs
+	 * @param assigns
+	 * @param A
+	 * @param B
+	 * @param ep
+	 * @return
+	 */
+	private List<SplitCell> detectPotentialSplit(double[][] costs, int[] assigns, SegmentedImage A, SegmentedImage B, double ep){
 		List<SplitCell> result = new ArrayList<SplitCell>();
 		for(int i = 0; i < costs.length; i++){
 			List<ProcessedCell> temp = new ArrayList<ProcessedCell>();
-			double min_weight = Double.MAX_VALUE;
+			if(assigns[i] == -1) continue;
+			double weight = costs[i][assigns[i]];
 			for(int j = 0; i < costs[0].length; j++){
-				min_weight = Math.min(min_weight, costs[i][j]);
-			}
-			for(int j = 0; i < costs[0].length; j++){
-				if(min_weight/costs[i][j] >= ep){
+				if(weight/costs[i][j] >= ep){
 					temp.add(B.getCell(j));
 				}
 			}
@@ -106,6 +176,12 @@ public class Tracker {
 		return result;
 	}
 	
+	/**
+	 * Generates a cost matrix for assignments from A to B
+	 * @param A
+	 * @param B
+	 * @return
+	 */
 	private double[][] assignCosts(SegmentedImage A, SegmentedImage B){
 		double[][] costs = new double[A.numCells()+3][B.numCells()+3];
 		double minWeight = 5*100*100;
@@ -138,28 +214,53 @@ public class Tracker {
 	
 }
 
+/**
+ * Wrapper for a File with its sequence number
+ * @author Alec
+ *
+ */
 class FileWrapper implements Comparable<FileWrapper>{
-	
+
 	private File file;
 	private int id;
 	
+	/**
+	 * Constructs a FileWrapper
+	 * @param file
+	 * @param id
+	 */
 	public FileWrapper(File file, int id){
 		this.file = file;
 		this.id = id;
 	}
 	
+	/**
+	 * For Comparable interface
+	 */
 	public int compareTo(FileWrapper o){
 		return id - o.getId();
 	}
 	
+	/**
+	 * Returns the file's sequence number
+	 * @return
+	 */
 	public int getId(){
 		return id;
 	}
 	
+	/**
+	 * Returns the file itself
+	 * @return
+	 */
 	public File getFile(){
 		return file;
 	}
 	
+	/**
+	 * Returns the name of the file
+	 * @return
+	 */
 	public String getName(){
 		return file.getName();
 	}
@@ -170,20 +271,41 @@ class FileWrapper implements Comparable<FileWrapper>{
  * 1. multiple cells in image i have close weights to 1 cell in image i+1
  * 2. 1 cell in image i have close weights to multiple cells in image i+1
  */
+
+/**
+ * Wrapper for storing merge conflicts
+ * @author Alec
+ *
+ */
 class MergeCell {
 	public List<ProcessedCell> src;
 	public ProcessedCell dst;
 	
+	/**
+	 * Constructs a potential conflict with a src list mapping to a destination cell
+	 * @param src
+	 * @param dst
+	 */
 	public MergeCell(List<ProcessedCell> src, ProcessedCell dst){
 		this.src = src;
 		this.dst = dst;
 	}
 }
 
+/**
+ * Wrapper for storing split conflicts
+ * @author Alec
+ *
+ */
 class SplitCell {
 	public ProcessedCell src;
 	public List<ProcessedCell> dst;
 	
+	/**
+	 * Constructs a potential conflict with a src cell mapping to a destination list
+	 * @param src
+	 * @param dst
+	 */
 	public SplitCell(ProcessedCell src, List<ProcessedCell> dst){
 		this.src = src;
 		this.dst = dst;

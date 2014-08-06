@@ -10,6 +10,12 @@ import edu.uci.ics.graphics.neurovizj.src.process.Segmentator;
 import edu.uci.ics.graphics.neurovizj.src.process.SegmentedImage;
 import edu.uci.ics.graphics.neurovizj.src.process.Tracker;
 
+/**
+ * Entry point for the program
+ * Command line flags are documented in the README
+ * @author Alec
+ *
+ */
 public class Main {
 	
 	static String oName = "output.png";

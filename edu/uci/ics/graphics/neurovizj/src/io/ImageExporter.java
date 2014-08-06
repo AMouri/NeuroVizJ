@@ -78,6 +78,11 @@ public class ImageExporter {
 		}
 	}
 	
+	/**
+	 * Saves a singleton image as a tiff
+	 * @param image
+	 * @param out
+	 */
 	public static void saveTiff(SegmentedImage image, String out){
 		int cellNum = 1;
 		for(ProcessedCell cell : image.getCells()){

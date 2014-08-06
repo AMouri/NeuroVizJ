@@ -4,8 +4,18 @@ import java.io.File;
 
 import edu.uci.ics.graphics.neurovizj.src.process.SegmentedImage;
 
+/**
+ * Exports batches of images with an associated excel spreadsheet
+ * @author Alec
+ *
+ */
 public class BatchExporter {
 	
+	/**
+	 * Performs exportation of series of tracked images and an output name
+	 * @param tracked
+	 * @param out
+	 */
 	public static void exportBatch(SegmentedImage[] tracked, String out){
 		for(int i = 0; i < tracked.length; i++){
 			System.out.println("Exporting image " + i);
