@@ -1,5 +1,7 @@
 package edu.uci.ics.graphics.neurovizj.src.process;
 
+import java.io.FileNotFoundException;
+
 import ij.ImagePlus;
 import ij.plugin.ContrastEnhancer;
 import ij.plugin.filter.RankFilters;
@@ -21,8 +23,12 @@ public class InputImage {
 	 * Loads image located at path and stores useful processed variations of the image
 	 * @param path
 	 */
-	public InputImage(String path){
+	public InputImage(String path) throws FileNotFoundException{
 		origImg = new ImagePlus(path);
+		if(origImg.getProcessor() == null){
+			throw new FileNotFoundException();
+		}
+		
 		//adjImg = new ImagePlus(path);
 		
 		//rescale the intensity of the image so that min is 5.1 and max is 249.9

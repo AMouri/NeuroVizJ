@@ -27,18 +27,28 @@ public class Main {
 
 	public static void main(String[] args) {
 		for(int i = 0; i < args.length; i++){
-			if(args[i].equals("-i")){
-				iName = args[++i];
-			} else if (args[i].equals("-o")){
-				oName = args[++i];
-			} else if (args[i].equals("-f")){
-				folder = args[++i];
-			} else if (args[i].equals("-s")){
-				segment = true;
-			} else if (args[i].equals("-t")){
-				track = true;
-			} else if (args[i].equals("-thresh")){
-				thresholded = true;
+			switch(args[i]){
+				case "-i":
+					iName = args[++i];
+					break;
+				case "-o":
+					oName = args[++i];
+					break;
+				case "-f":
+					folder = args[++i];
+					break;
+				case "-s":
+					segment = true;
+					break;
+				case "-t":
+					track = true;
+					break;
+				case "-thresh":
+					thresholded = true;
+					break;
+				default:
+					System.err.println("Invalid command line arguments");
+					System.exit(1);	
 			}
 		}
 		

@@ -7,13 +7,11 @@ import ij.ImagePlus;
 import ij.process.ImageProcessor;
 
 /**
- * Wrapper for the segmented image and the list of cells
+ * Wrapper for the cells present in an image
  * @author Alec
  *
  */
 public class SegmentedImage {
-	private ImageProcessor ip;
-	private ImageProcessor orig;
 	private List<ProcessedCell> cells;
 	
 	/**
@@ -22,9 +20,7 @@ public class SegmentedImage {
 	 * @param orig
 	 * @param cells
 	 */
-	public SegmentedImage(ImageProcessor ip, ImageProcessor orig, List<ProcessedCell> cells){
-		this.ip = ip;
-		this.orig = orig;
+	public SegmentedImage(List<ProcessedCell> cells){
 		this.cells = cells;
 	}
 	
@@ -34,26 +30,12 @@ public class SegmentedImage {
 	 * @param segmentator
 	 */
 	public SegmentedImage(String image, Segmentator segmentator){
-		this.orig = new ImagePlus(image).getProcessor();
 		ImagePlus segmented = segmentator.segment(image);
-		this.ip = segmented.getProcessor();
-		this.cells = ProcessedCell.findCells(new ImagePlus(image), segmented, image);
-	}
-	
-	/**
-	 * Retrieves the segmented image
-	 * @return
-	 */
-	public ImageProcessor getImage(){
-		return ip;
-	}
-	
-	/**
-	 * Retrieves the original image
-	 * @return
-	 */
-	public ImageProcessor getOrig(){
-		return orig;
+		if(segmented != null){
+			this.cells = ProcessedCell.findCells(new ImagePlus(image), segmented, image);
+		} else {
+			this.cells = null;
+		}
 	}
 	
 	/**
@@ -62,6 +44,14 @@ public class SegmentedImage {
 	 */
 	public List<ProcessedCell> getCells(){
 		return cells;
+	}
+	
+	/**
+	 * Returns whether the segmented image able to be segmented properly
+	 * @return
+	 */
+	public boolean isValid(){
+		return cells != null;
 	}
 	
 	/**

@@ -1,5 +1,6 @@
 package edu.uci.ics.graphics.neurovizj.src.process;
 
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
@@ -44,11 +45,25 @@ public class Segmentator {
 	 * @return
 	 */
 	public ImagePlus segment(String path){
-		InputImage input = new InputImage(path);
+		InputImage input;
+		try{
+			input = new InputImage(path);
+		} catch (FileNotFoundException e){
+			return null;
+		}
 		ImageProcessor origImg = input.getOrig().getProcessor();
 		ImageProcessor adjustedImg = input.getAdjusted().getProcessor();
 		int width = origImg.getWidth();
 		int height = adjustedImg.getHeight();
+		
+		System.out.println("Detecting blurriness");
+		//test constant
+		if(BlurDetector.detectBlur(origImg, .1)){
+			System.out.println("Discarding...");
+			System.err.println("Discarding image due to blurriness");
+			return null;
+		}
+		System.out.println("Image is fine");
 		
 		ImageProcessor minSuppres = doMinimumSuppression(origImg, adjustedImg);
 		

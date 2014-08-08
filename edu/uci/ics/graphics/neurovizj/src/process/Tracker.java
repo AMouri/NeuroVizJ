@@ -56,7 +56,9 @@ public class Tracker {
 		
 		for(int i = 0; i < files.length - 1; i++){
 			System.out.println("Matching " + files[i].getName() + " and " + files[i+1].getName());
-			match(segmented[i], segmented[i+1]);
+			if(segmented[i].isValid() && segmented[i+1].isValid()){
+				match(segmented[i], segmented[i+1]);
+			}
 		}
 		
 		return segmented;
