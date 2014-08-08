@@ -26,8 +26,6 @@ public class BlurDetector {
 		dummy.convolve3x3(laplaceKernel);
 		dummy.resetMinAndMax();
 		double maxValue = dummy.getMax();
-		System.out.println(maxValue);
-		System.out.println(threshold < maxValue);
 		return threshold > maxValue;
 	}
 }

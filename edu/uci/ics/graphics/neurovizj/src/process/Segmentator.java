@@ -56,14 +56,11 @@ public class Segmentator {
 		int width = origImg.getWidth();
 		int height = adjustedImg.getHeight();
 		
-		System.out.println("Detecting blurriness");
 		//test constant
 		if(BlurDetector.detectBlur(origImg, .1)){
-			System.out.println("Discarding...");
-			System.err.println("Discarding image due to blurriness");
+			System.err.println("Discarding image " + path + " due to blurriness");
 			return null;
 		}
-		System.out.println("Image is fine");
 		
 		ImageProcessor minSuppres = doMinimumSuppression(origImg, adjustedImg);
 		
@@ -115,6 +112,7 @@ public class Segmentator {
 		List<BoundaryBox> bbs = BoundaryBox.getBoundaries(threshSmooth, maximList);
 		
 		ImageProcessor mask = performWatershedding(maximList, bbs, width, height, hMin, origImg);
+		mask.threshold(0);
 		
 		//System.out.println("Time elapsed: " + (System.nanoTime() - begin)/1000000000.0 + " seconds");
 		return new ImagePlus("Segmented image", mask); //TODO: change when completed testing
@@ -348,7 +346,7 @@ public class Segmentator {
 	 * @return
 	 */
 	private List<Point> findMaxima(ImageProcessor smoothed){
-		smoothed.setRoi(40, 40, smoothed.getWidth()-2*40, smoothed.getHeight()-2*40);
+//		smoothed.setRoi(40, 40, smoothed.getWidth()-2*40, smoothed.getHeight()-2*40);
 		MaximumFinder maxFind = new MaximumFinder();
 		ByteProcessor maximas = maxFind.findMaxima(smoothed, 0.0, ImageProcessor.NO_THRESHOLD, MaximumFinder.SINGLE_POINTS, false, false);
 		
