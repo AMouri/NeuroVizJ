@@ -112,7 +112,6 @@ public class Segmentator {
 		List<BoundaryBox> bbs = BoundaryBox.getBoundaries(threshSmooth, maximList);
 		
 		ImageProcessor mask = performWatershedding(maximList, bbs, width, height, hMin, origImg);
-		mask.threshold(0);
 		
 		//System.out.println("Time elapsed: " + (System.nanoTime() - begin)/1000000000.0 + " seconds");
 		return new ImagePlus("Segmented image", mask); //TODO: change when completed testing
